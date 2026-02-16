@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="sugenix_malabar"
+        android:label="Sugenix"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
