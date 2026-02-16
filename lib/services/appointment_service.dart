@@ -48,10 +48,9 @@ class AppointmentService {
         if (existingDateTime.year == dateTime.year &&
             existingDateTime.month == dateTime.month &&
             existingDateTime.day == dateTime.day) {
-          // Check if time slot conflicts (within 30 minutes)
-          final timeDifference =
-              (existingDateTime.difference(dateTime).inMinutes).abs();
-          if (timeDifference < 30) {
+          // Check if it's the exact same time slot (hour and minute match)
+          if (existingDateTime.hour == dateTime.hour &&
+              existingDateTime.minute == dateTime.minute) {
             throw Exception('This time slot is already booked');
           }
         }
