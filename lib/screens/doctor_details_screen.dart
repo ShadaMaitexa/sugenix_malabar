@@ -1206,75 +1206,41 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
         }
       }
     } else {
-      // Online payment - redirect to dummy payment screen
+      // Online payment - Use actual Razorpay
       final consultationFee = widget.doctor.consultationFee;
       final fees = RevenueService.calculateFees(consultationFee);
       final totalFee = fees['totalFee']!;
 
       setState(() {
-        _isLoading = false;
+        _isLoading = true;
       });
 
-      // Navigate to dummy payment screen
-      final result = await Navigator.push<Map<String, dynamic>>(
-        context,
-        MaterialPageRoute(
-          builder: (context) => DummyPaymentScreen(
-            amount: totalFee,
-            name: _patientNameController.text.trim(),
-            email: _userProfile?['email'] ?? 'patient@sugenix.com',
-            phone: _mobileController.text.trim(),
-            description: 'Appointment with ${widget.doctor.name}',
-            onPaymentComplete: (success, paymentId) {
-              // Handle payment completion
-            },
-          ),
-        ),
-      );
+      try {
+        // Open Razorpay checkout
+        await RazorpayService.openCheckout(
+          amount: totalFee,
+          name: _patientNameController.text.trim(),
+          email: _userProfile?['email'] ?? 'patient@sugenix.com',
+          phone: _mobileController.text.trim(),
+          description: 'Appointment with ${widget.doctor.name}',
+          notes: {
+            'appointment_id': _lastAppointmentId!,
+            'doctor_name': widget.doctor.name,
+            'patient_name': _patientNameController.text.trim(),
+          },
+        );
 
-      if (result != null && result['success'] == true) {
-        // Payment successful, process payment
-        setState(() {
-          _isLoading = true;
-        });
-        try {
-          await _appointmentService.processPayment(
-            appointmentId: _lastAppointmentId!,
-            paymentMethod: 'razorpay',
-          );
-          if (mounted) {
-            setState(() {
-              _isLoading = false;
-            });
-            _showSuccessDialog(context, _selectedDate);
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Payment successful! Appointment booked.'),
-                backgroundColor: Colors.green,
-              ),
-            );
-          }
-        } catch (e) {
-          if (mounted) {
-            setState(() {
-              _isLoading = false;
-            });
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                    'Payment recorded but failed to update: ${e.toString()}'),
-                backgroundColor: Colors.orange,
-              ),
-            );
-          }
-        }
-      } else {
-        // Payment cancelled or failed
+        // Loading state will be handled by Razorpay callbacks
+        // Success callback is already set up in initState
+      } catch (e) {
         if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Payment cancelled'),
-              backgroundColor: Colors.orange,
+            SnackBar(
+              content: Text('Failed to open payment: ${e.toString()}'),
+              backgroundColor: Colors.red,
             ),
           );
         }
