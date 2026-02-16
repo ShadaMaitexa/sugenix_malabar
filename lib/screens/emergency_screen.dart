@@ -18,8 +18,6 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
   bool _isSending = false;
   int _countdown = 5;
 
-
-
   @override
   void initState() {
     super.initState();
@@ -31,7 +29,6 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
   }
 
   Future<void> _requestPermissions() async {
-    await _sosAlertService.requestSMSPermissions();
     await PlatformLocationService.requestLocationPermission();
   }
 
@@ -182,7 +179,7 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
                   color: Colors.white,
                 ),
               ),
-              if (!_isSending) 
+              if (!_isSending)
                 const Text(
                   "Tap or Hold",
                   style: TextStyle(

@@ -3,22 +3,17 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:sugenix/services/platform_location_service.dart';
 import 'package:sugenix/services/emailjs_service.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:telephony/telephony.dart';
 
 class SOSAlertService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final Telephony _telephony = Telephony.instance;
 
   // Request necessary permissions proactively
-  Future<bool> requestSMSPermissions() async {
-    final bool? granted = await _telephony.requestPhoneAndSmsPermissions;
-    return granted ?? false;
-  }
 
   // Generate SOS message with location
   static String _generateSOSMessage({
     required String userName,
+    required String userEmail,
     required String? address,
     required double? latitude,
     required double? longitude,
@@ -27,6 +22,7 @@ class SOSAlertService {
     String message = '''🚨 SOS EMERGENCY ALERT 🚨
 
 User: $userName
+Email: $userEmail
 Alert Type: Medical Emergency - Diabetic Crisis
 
 Location Details:
@@ -57,54 +53,6 @@ Sent from: Sugenix - Diabetes Management App
 ''';
 
     return message;
-  }
-
-  // Send SOS alert via SMS
-  Future<bool> _sendSOSViaSMS({
-    required String phoneNumber,
-    required String message,
-  }) async {
-    try {
-      print('Attempting to send SOS SMS to $phoneNumber');
-
-      // Check/Request SMS permission
-      final bool? permissionsGranted =
-          await _telephony.requestPhoneAndSmsPermissions;
-
-      if (permissionsGranted != true) {
-        print('SMS permissions denied');
-        return false;
-      }
-
-      // Format phone number
-      // 1. Remove all non-digit characters except +
-      String cleanPhone = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
-
-      // 2. If it doesn't start with +, and is 10 digits, assume India (+91)
-      // This is a common requirement for many Indian carriers to send SMS
-      if (!cleanPhone.startsWith('+')) {
-        if (cleanPhone.length == 10) {
-          cleanPhone = '+91$cleanPhone';
-        } else if (cleanPhone.length > 10) {
-          // If it's already more than 10 digits but no +, add one if it doesn't have it
-          cleanPhone = '+$cleanPhone';
-        }
-      }
-
-      print('Sending SMS to $cleanPhone...');
-
-      await _telephony.sendSms(
-        to: cleanPhone,
-        message: message,
-        isMultipart: true, // Handle long messages
-      );
-
-      print('SMS sent successfully to $cleanPhone');
-      return true;
-    } catch (e) {
-      print('Error sending SOS SMS: $e');
-      return false;
-    }
   }
 
   // Get recent glucose readings for the current user
@@ -195,6 +143,8 @@ Sent from: Sugenix - Diabetes Management App
       final userDoc = await _firestore.collection('users').doc(userId).get();
       final userData = userDoc.data();
       final userName = userData?['name'] ?? 'User';
+      final userEmail =
+          userData?['email'] ?? _auth.currentUser?.email ?? 'No email';
 
       // Get current location with proper permission handling
       Position? position;
@@ -261,6 +211,7 @@ Sent from: Sugenix - Diabetes Management App
       // Generate SOS message
       final sosMessage = _generateSOSMessage(
         userName: userName,
+        userEmail: userEmail,
         address: address,
         latitude: position?.latitude,
         longitude: position?.longitude,
@@ -288,53 +239,48 @@ Sent from: Sugenix - Diabetes Management App
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      // Send SMS messages to all emergency contacts
+      // Send Email messages to all emergency contacts
       List<Map<String, dynamic>> notificationResults = [];
       Map<String, dynamic> notificationStatus = {};
 
       for (final contact in emergencyContacts) {
-        final phoneNumber = contact['phone']?.toString() ?? '';
         final contactName = contact['name']?.toString() ?? 'Emergency Contact';
+        final email = contact['email']?.toString() ?? '';
+        final phone =
+            contact['phone']?.toString() ?? ''; // Keep phone for reference
 
-        if (phoneNumber.isNotEmpty) {
-          final success = await _sendSOSViaSMS(
-            phoneNumber: phoneNumber,
+        if (email.isNotEmpty) {
+          final emailSuccess = await EmailJSService.sendSOSEmail(
+            recipientEmail: email,
+            recipientName: contactName,
+            userName: userName,
             message: sosMessage,
           );
 
-          // Also send via EmailJS if email is available
-          final email = contact['email']?.toString() ?? '';
-          bool emailSuccess = false;
-          if (email.isNotEmpty) {
-            emailSuccess = await EmailJSService.sendSOSEmail(
-              recipientEmail: email,
-              recipientName: contactName,
-              userName: userName,
-              message: sosMessage,
-            );
-          }
-
           notificationResults.add({
             'contact': contactName,
-            'phone': phoneNumber,
             'email': email,
-            'status': (success || emailSuccess) ? 'sent' : 'failed',
-            'sms_status': success ? 'sent' : 'failed',
-            'email_status': email.isNotEmpty
-                ? (emailSuccess ? 'sent' : 'failed')
-                : 'not_available',
+            'phone': phone,
+            'status': emailSuccess ? 'sent' : 'failed',
+            'email_status': emailSuccess ? 'sent' : 'failed',
             'timestamp': DateTime.now().toIso8601String(),
           });
 
-          notificationStatus[phoneNumber] = {
+          notificationStatus[email.replaceAll('.', '_')] = {
             'name': contactName,
-            'status': (success || emailSuccess) ? 'sent' : 'failed',
-            'sms_status': success ? 'sent' : 'failed',
-            'email_status': email.isNotEmpty
-                ? (emailSuccess ? 'sent' : 'failed')
-                : 'not_available',
+            'status': emailSuccess ? 'sent' : 'failed',
+            'email_status': emailSuccess ? 'sent' : 'failed',
             'timestamp': FieldValue.serverTimestamp(),
           };
+        } else {
+          notificationResults.add({
+            'contact': contactName,
+            'email': '',
+            'phone': phone,
+            'status': 'skipped',
+            'reason': 'No email provided',
+            'timestamp': DateTime.now().toIso8601String(),
+          });
         }
       }
 
