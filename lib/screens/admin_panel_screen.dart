@@ -160,7 +160,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
         children: [
           // Logo/Brand section
           Container(
-            padding: const EdgeInsets.all(20),
+            padding: EdgeInsets.all(_sidebarCollapsed ? 12 : 20),
             child: Row(
               children: [
                 Container(
@@ -281,7 +281,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   _sidebarCollapsed = !_sidebarCollapsed;
                 });
               },
-              tooltip: _sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar',
+              tooltip:
+                  _sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar',
             ),
           ),
         ],
@@ -303,7 +304,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
       },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: EdgeInsets.symmetric(
+            horizontal: _sidebarCollapsed ? 8 : 16, vertical: 14),
         decoration: BoxDecoration(
           color: isSelected
               ? const Color(0xFF0C4556).withOpacity(0.1)
@@ -317,6 +319,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               : null,
         ),
         child: Row(
+          mainAxisAlignment: _sidebarCollapsed
+              ? MainAxisAlignment.center
+              : MainAxisAlignment.start,
           children: [
             Icon(
               icon,
@@ -330,10 +335,10 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   title,
                   style: TextStyle(
                     fontSize: 15,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                    color: isSelected
-                        ? const Color(0xFF0C4556)
-                        : Colors.grey[700],
+                    fontWeight:
+                        isSelected ? FontWeight.w600 : FontWeight.normal,
+                    color:
+                        isSelected ? const Color(0xFF0C4556) : Colors.grey[700],
                   ),
                 ),
               ),
@@ -447,11 +452,10 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
         child: _buildSummary(),
       );
     }
-    
+
     // For other pages, let them handle their own scrolling
     return _buildPageContent();
   }
-
 
   Widget _buildPageContent() {
     switch (_selectedPage) {
@@ -523,14 +527,14 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           physics: const NeverScrollableScrollPhysics(),
           crossAxisSpacing: 20,
           mainAxisSpacing: 20,
-          childAspectRatio: constraints.maxWidth > 1200 ? 5.0 : 4.5,
+          childAspectRatio: constraints.maxWidth > 1300 ? 3.2 : 2.3,
           children: [
             _summaryCard(
                 Icons.people, Colors.blue, 'Total Users', '$_totalUsers'),
             _summaryCard(
                 Icons.medical_services, Colors.green, 'Doctors', '$_doctors'),
-            _summaryCard(
-                Icons.local_pharmacy, Colors.orange, 'Pharmacies', '$_pharmacies'),
+            _summaryCard(Icons.local_pharmacy, Colors.orange, 'Pharmacies',
+                '$_pharmacies'),
             _summaryCard(
                 Icons.receipt_long, Colors.purple, 'Orders', '$_orders'),
           ],
@@ -553,50 +557,52 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           ),
         ],
       ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(7),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(10),
+      child: LayoutBuilder(builder: (context, boxConstraints) {
+        return Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(7),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: color, size: 18),
             ),
-            child: Icon(icon, color: color, size: 18),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 9,
-                    fontWeight: FontWeight.w500,
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: Colors.grey[600],
+                      fontSize: 9,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 1),
-                Text(
-                  value,
-                  style: const TextStyle(
-                    color: Color(0xFF0C4556),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                    height: 1.0,
+                  const SizedBox(height: 1),
+                  Text(
+                    value,
+                    style: const TextStyle(
+                      color: Color(0xFF0C4556),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      height: 1.0,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        );
+      }),
     );
   }
 }
@@ -768,11 +774,10 @@ class _UsersTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('users')
-          .snapshots(),
+      stream: FirebaseFirestore.instance.collection('users').snapshots(),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            !snapshot.hasData) {
           return const Center(
             child: Padding(
               padding: EdgeInsets.all(40),
@@ -839,12 +844,12 @@ class _UsersTab extends StatelessWidget {
         sortedDocs.sort((a, b) {
           final aData = a.data() as Map<String, dynamic>?;
           final bData = b.data() as Map<String, dynamic>?;
-          
+
           if (aData == null || bData == null) return 0;
-          
+
           final aCreatedAt = aData['createdAt'];
           final bCreatedAt = bData['createdAt'];
-          
+
           if (aCreatedAt is Timestamp && bCreatedAt is Timestamp) {
             return bCreatedAt.compareTo(aCreatedAt); // Descending
           }
@@ -1383,11 +1388,11 @@ class _AllMedicalRecordsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('medical_records')
-          .snapshots(),
+      stream:
+          FirebaseFirestore.instance.collection('medical_records').snapshots(),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            !snapshot.hasData) {
           return const Center(
             child: Padding(
               padding: EdgeInsets.all(40),
@@ -1423,7 +1428,8 @@ class _AllMedicalRecordsTab extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.description_outlined, size: 64, color: Colors.grey[400]),
+                  Icon(Icons.description_outlined,
+                      size: 64, color: Colors.grey[400]),
                   const SizedBox(height: 16),
                   const Text(
                     'No records found',
@@ -1447,7 +1453,8 @@ class _AllMedicalRecordsTab extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.description_outlined, size: 64, color: Colors.grey[400]),
+                  Icon(Icons.description_outlined,
+                      size: 64, color: Colors.grey[400]),
                   const SizedBox(height: 16),
                   const Text(
                     'No records found',
@@ -1468,12 +1475,12 @@ class _AllMedicalRecordsTab extends StatelessWidget {
         sortedDocs.sort((a, b) {
           final aData = a.data() as Map<String, dynamic>?;
           final bData = b.data() as Map<String, dynamic>?;
-          
+
           if (aData == null || bData == null) return 0;
-          
+
           final aCreatedAt = aData['createdAt'];
           final bCreatedAt = bData['createdAt'];
-          
+
           if (aCreatedAt is Timestamp && bCreatedAt is Timestamp) {
             return bCreatedAt.compareTo(aCreatedAt); // Descending
           }
@@ -1905,11 +1912,10 @@ class _AllOrdersTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('orders')
-          .snapshots(),
+      stream: FirebaseFirestore.instance.collection('orders').snapshots(),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            !snapshot.hasData) {
           return const Center(
             child: Padding(
               padding: EdgeInsets.all(40),
@@ -1955,7 +1961,8 @@ class _AllOrdersTab extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.receipt_long_outlined, size: 64, color: Colors.grey[400]),
+                  Icon(Icons.receipt_long_outlined,
+                      size: 64, color: Colors.grey[400]),
                   const SizedBox(height: 16),
                   const Text(
                     'No orders found',
@@ -1976,12 +1983,12 @@ class _AllOrdersTab extends StatelessWidget {
         sortedDocs.sort((a, b) {
           final aData = a.data() as Map<String, dynamic>?;
           final bData = b.data() as Map<String, dynamic>?;
-          
+
           if (aData == null || bData == null) return 0;
-          
+
           final aCreatedAt = aData['createdAt'];
           final bCreatedAt = bData['createdAt'];
-          
+
           if (aCreatedAt is Timestamp && bCreatedAt is Timestamp) {
             return bCreatedAt.compareTo(aCreatedAt); // Descending
           }
