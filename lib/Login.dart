@@ -44,227 +44,237 @@ class _LoginState extends State<Login> {
     );
 
     return Scaffold(
-        body: Container(
-            decoration: const BoxDecoration(
-              gradient: RadialGradient(
-                center: Alignment.topLeft,
-                radius: 0.7,
-                colors: [Color(0xFF0C4556), Colors.white],
-                stops: [0.0, 1.0],
-              ),
+        body: Stack(
+      children: [
+        Container(
+          decoration: const BoxDecoration(
+            gradient: RadialGradient(
+              center: Alignment.topLeft,
+              radius: 0.7,
+              colors: [Color(0xFF0C4556), Colors.white],
+              stops: [0.0, 1.0],
             ),
-            child: SafeArea(
-              child: Stack(
-                children: [
-                  SingleChildScrollView(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 40),
-                          Builder(
-                            builder: (context) {
-                              final l10n = AppLocalizations.of(context)!;
-                              return Text(
-                                l10n.welcomeBack,
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: titleSize,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              );
-                            },
+          ),
+        ),
+        Container(
+          decoration: const BoxDecoration(
+            gradient: RadialGradient(
+              center: Alignment.bottomRight,
+              radius: 0.7,
+              colors: [Color(0xFF0C4556), Colors.transparent],
+              stops: [0.0, 1.0],
+            ),
+          ),
+        ),
+        SafeArea(
+          child: Stack(
+            children: [
+              SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 40),
+                      Builder(
+                        builder: (context) {
+                          final l10n = AppLocalizations.of(context)!;
+                          return Text(
+                            l10n.welcomeBack,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: titleSize,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 20),
+                      Builder(
+                        builder: (context) {
+                          final l10n = AppLocalizations.of(context)!;
+                          return Text(
+                            l10n.signInToContinue,
+                            style: TextStyle(
+                                color: Colors.white70, fontSize: subtitleSize),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 40),
+                      Center(
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: isWide ? 520 : double.infinity,
                           ),
-                          const SizedBox(height: 20),
-                          Builder(
-                            builder: (context) {
-                              final l10n = AppLocalizations.of(context)!;
-                              return Text(
-                                l10n.signInToContinue,
-                                style: TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: subtitleSize),
-                              );
-                            },
-                          ),
-                          const SizedBox(height: 40),
-                          Center(
-                            child: ConstrainedBox(
-                              constraints: BoxConstraints(
-                                maxWidth: isWide ? 520 : double.infinity,
-                              ),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(12),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.1),
-                                      blurRadius: 10,
-                                      offset: const Offset(0, 5),
-                                    ),
-                                  ],
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 5),
                                 ),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(20.0),
-                                  child: Builder(
-                                    builder: (context) {
-                                      final l10n =
-                                          AppLocalizations.of(context)!;
-                                      return Column(
-                                        children: [
-                                          TextField(
-                                            controller: _emailController,
-                                            decoration: InputDecoration(
-                                              hintText: l10n.email,
-                                              prefixIcon: const Icon(
-                                                  Icons.email_outlined),
-                                              border: OutlineInputBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(10),
-                                                borderSide: BorderSide.none,
-                                              ),
-                                              filled: true,
-                                              fillColor: Colors.grey[100],
+                              ],
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(20.0),
+                              child: Builder(
+                                builder: (context) {
+                                  final l10n = AppLocalizations.of(context)!;
+                                  return Column(
+                                    children: [
+                                      TextField(
+                                        controller: _emailController,
+                                        decoration: InputDecoration(
+                                          hintText: l10n.email,
+                                          prefixIcon:
+                                              const Icon(Icons.email_outlined),
+                                          border: OutlineInputBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(10),
+                                            borderSide: BorderSide.none,
+                                          ),
+                                          filled: true,
+                                          fillColor: Colors.grey[100],
+                                        ),
+                                      ),
+                                      const SizedBox(height: 20),
+                                      TextField(
+                                        controller: _passwordController,
+                                        obscureText: _obscurePassword,
+                                        decoration: InputDecoration(
+                                          hintText: l10n.password,
+                                          prefixIcon:
+                                              const Icon(Icons.lock_outlined),
+                                          suffixIcon: IconButton(
+                                            icon: Icon(
+                                              _obscurePassword
+                                                  ? Icons.visibility
+                                                  : Icons.visibility_off,
+                                            ),
+                                            onPressed: () {
+                                              setState(() {
+                                                _obscurePassword =
+                                                    !_obscurePassword;
+                                              });
+                                            },
+                                          ),
+                                          border: OutlineInputBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(10),
+                                            borderSide: BorderSide.none,
+                                          ),
+                                          filled: true,
+                                          fillColor: Colors.grey[100],
+                                        ),
+                                      ),
+                                      const SizedBox(height: 20),
+                                      Align(
+                                        alignment: Alignment.centerRight,
+                                        child: TextButton(
+                                          onPressed: () {
+                                            _showForgotPasswordModal(context);
+                                          },
+                                          child: Text(
+                                            l10n.forgotPassword,
+                                            style: const TextStyle(
+                                              color: Color(0xFF0C4556),
+                                              fontWeight: FontWeight.w500,
                                             ),
                                           ),
-                                          const SizedBox(height: 20),
-                                          TextField(
-                                            controller: _passwordController,
-                                            obscureText: _obscurePassword,
-                                            decoration: InputDecoration(
-                                              hintText: l10n.password,
-                                              prefixIcon: const Icon(
-                                                  Icons.lock_outlined),
-                                              suffixIcon: IconButton(
-                                                icon: Icon(
-                                                  _obscurePassword
-                                                      ? Icons.visibility
-                                                      : Icons.visibility_off,
-                                                ),
-                                                onPressed: () {
-                                                  setState(() {
-                                                    _obscurePassword =
-                                                        !_obscurePassword;
-                                                  });
-                                                },
-                                              ),
-                                              border: OutlineInputBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(10),
-                                                borderSide: BorderSide.none,
-                                              ),
-                                              filled: true,
-                                              fillColor: Colors.grey[100],
+                                        ),
+                                      ),
+                                      const SizedBox(height: 20),
+                                      SizedBox(
+                                        width: double.infinity,
+                                        height: 50,
+                                        child: ElevatedButton(
+                                          onPressed:
+                                              _isLoading ? null : _handleLogin,
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor:
+                                                const Color(0xFF0C4556),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(10),
                                             ),
                                           ),
-                                          const SizedBox(height: 20),
-                                          Align(
-                                            alignment: Alignment.centerRight,
-                                            child: TextButton(
-                                              onPressed: () {
-                                                _showForgotPasswordModal(
-                                                    context);
-                                              },
-                                              child: Text(
-                                                l10n.forgotPassword,
-                                                style: const TextStyle(
-                                                  color: Color(0xFF0C4556),
-                                                  fontWeight: FontWeight.w500,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                          const SizedBox(height: 20),
-                                          SizedBox(
-                                            width: double.infinity,
-                                            height: 50,
-                                            child: ElevatedButton(
-                                              onPressed: _isLoading
-                                                  ? null
-                                                  : _handleLogin,
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor:
-                                                    const Color(0xFF0C4556),
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(10),
-                                                ),
-                                              ),
-                                              child: _isLoading
-                                                  ? const SizedBox(
-                                                      width: 20,
-                                                      height: 20,
-                                                      child:
-                                                          CircularProgressIndicator(
-                                                        color: Colors.white,
-                                                        strokeWidth: 2,
-                                                      ),
-                                                    )
-                                                  : Text(
-                                                      l10n.login,
-                                                      style: const TextStyle(
-                                                        color: Colors.white,
-                                                        fontSize: 16,
-                                                        fontWeight:
-                                                            FontWeight.w600,
-                                                      ),
-                                                    ),
-                                            ),
-                                          ),
-                                          const SizedBox(height: 20),
-                                          Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: [
-                                              Text(
-                                                l10n.dontHaveAccount,
-                                                style: const TextStyle(
-                                                    color: Colors.grey),
-                                              ),
-                                              TextButton(
-                                                onPressed: () {
-                                                  Navigator.push(
-                                                    context,
-                                                    MaterialPageRoute(
-                                                      builder: (context) =>
-                                                          const Signup(),
-                                                    ),
-                                                  );
-                                                },
-                                                child: Text(
-                                                  l10n.signup,
+                                          child: _isLoading
+                                              ? const SizedBox(
+                                                  width: 20,
+                                                  height: 20,
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                    color: Colors.white,
+                                                    strokeWidth: 2,
+                                                  ),
+                                                )
+                                              : Text(
+                                                  l10n.login,
                                                   style: const TextStyle(
-                                                    color: Color(0xFF0C4556),
+                                                    color: Colors.white,
+                                                    fontSize: 16,
                                                     fontWeight: FontWeight.w600,
                                                   ),
                                                 ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 20),
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            l10n.dontHaveAccount,
+                                            style: const TextStyle(
+                                                color: Colors.grey),
+                                          ),
+                                          TextButton(
+                                            onPressed: () {
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      const Signup(),
+                                                ),
+                                              );
+                                            },
+                                            child: Text(
+                                              l10n.signup,
+                                              style: const TextStyle(
+                                                color: Color(0xFF0C4556),
+                                                fontWeight: FontWeight.w600,
                                               ),
-                                            ],
+                                            ),
                                           ),
                                         ],
-                                      );
-                                    },
-                                  ),
-                                ),
+                                      ),
+                                    ],
+                                  );
+                                },
                               ),
                             ),
                           ),
-                        ],
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-
-                  // Language selector in top-right corner
-                  Positioned(
-                    top: 10,
-                    right: 10,
-                    child: _buildLanguageSelector(),
-                  ),
-                ],
+                ),
               ),
-            )));
+
+              // Language selector in top-right corner
+              Positioned(
+                top: 10,
+                right: 10,
+                child: _buildLanguageSelector(),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ));
   }
 
   Widget _buildLanguageSelector() {
