@@ -254,6 +254,7 @@ class AuthService {
   Future<void> addEmergencyContact({
     required String name,
     required String phone,
+    String? email,
     required String relationship,
   }) async {
     try {
@@ -264,6 +265,7 @@ class AuthService {
           {
             'name': name,
             'phone': phone,
+            'email': email ?? '',
             'relationship': relationship,
             'addedAt': FieldValue.serverTimestamp(),
           },

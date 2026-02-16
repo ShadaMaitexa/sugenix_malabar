@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 /// EmailJS Service for sending emails (Admin approvals, notifications)
-/// 
+///
 /// Setup Instructions:
 /// 1. Sign up at https://www.emailjs.com/
 /// 2. Create an Email Service (Gmail, Outlook, etc.)
@@ -20,9 +20,12 @@ class EmailJSService {
   // ⚠️ IMPORTANT: Replace these with your actual EmailJS credentials
   // Get these from https://www.emailjs.com/
   // Current values are placeholders - emails won't work until replaced
-  static const String _serviceId = 'service_f6ka8jm'; // TODO: Replace with your EmailJS Service ID
-  static const String _templateId = 'template_u50mo7i'; // TODO: Replace with your EmailJS Template ID
-  static const String _publicKey = 'CHxG3ZYeXEUuvz1MA'; // TODO: Replace with your EmailJS Public Key (User ID)
+  static const String _serviceId =
+      'service_f6ka8jm'; // TODO: Replace with your EmailJS Service ID
+  static const String _templateId =
+      'template_u50mo7i'; // TODO: Replace with your EmailJS Template ID
+  static const String _publicKey =
+      'CHxG3ZYeXEUuvz1MA'; // TODO: Replace with your EmailJS Public Key (User ID)
   static const String _baseUrl = 'https://api.emailjs.com/api/v1.0/email/send';
 
   /// Send approval email to pharmacy or doctor
@@ -35,7 +38,7 @@ class EmailJSService {
       // Draft email content from code
       final subject = 'Account Approved - Sugenix';
       final title = 'Congratulations! Your Account Has Been Approved';
-      
+
       final message = role == 'pharmacy'
           ? '''Dear ${recipientName},
 
@@ -96,7 +99,8 @@ Sugenix Team''';
         print('❌ EmailJS Error: ${response.statusCode} - $errorBody');
         // Check if it's a configuration error
         if (response.statusCode == 400 || response.statusCode == 401) {
-          print('⚠️ EmailJS credentials may be incorrect. Please check service_id, template_id, and public_key.');
+          print(
+              '⚠️ EmailJS credentials may be incorrect. Please check service_id, template_id, and public_key.');
         }
         return false;
       }
@@ -104,7 +108,8 @@ Sugenix Team''';
       print('❌ EmailJS Exception: $e');
       // Check if credentials are placeholders
       if (_serviceId.contains('service_') && _serviceId.length < 20) {
-        print('⚠️ EmailJS credentials appear to be placeholders. Please configure with your actual EmailJS credentials.');
+        print(
+            '⚠️ EmailJS credentials appear to be placeholders. Please configure with your actual EmailJS credentials.');
       }
       return false;
     }
@@ -121,7 +126,7 @@ Sugenix Team''';
       // Draft email content from code
       final subject = 'Account Application Status - Sugenix';
       final title = 'Account Application Update';
-      
+
       final defaultMessage = '''Dear ${recipientName},
 
 We regret to inform you that your ${role == 'pharmacy' ? 'pharmacy' : 'doctor'} account application has been reviewed and unfortunately, we are unable to approve it at this time.
@@ -171,7 +176,8 @@ We appreciate your interest in joining the Sugenix platform.'''
         print('❌ EmailJS Error: ${response.statusCode} - $errorBody');
         // Check if it's a configuration error
         if (response.statusCode == 400 || response.statusCode == 401) {
-          print('⚠️ EmailJS credentials may be incorrect. Please check service_id, template_id, and public_key.');
+          print(
+              '⚠️ EmailJS credentials may be incorrect. Please check service_id, template_id, and public_key.');
         }
         return false;
       }
@@ -179,10 +185,55 @@ We appreciate your interest in joining the Sugenix platform.'''
       print('❌ EmailJS Exception: $e');
       // Check if credentials are placeholders
       if (_serviceId.contains('service_') && _serviceId.length < 20) {
-        print('⚠️ EmailJS credentials appear to be placeholders. Please configure with your actual EmailJS credentials.');
+        print(
+            '⚠️ EmailJS credentials appear to be placeholders. Please configure with your actual EmailJS credentials.');
       }
       return false;
     }
   }
-}
 
+  /// Send Emergency SOS email to emergency contacts
+  static Future<bool> sendSOSEmail({
+    required String recipientEmail,
+    required String recipientName,
+    required String userName,
+    required String message,
+  }) async {
+    try {
+      final subject = '🚨 CRITICAL: SOS Emergency Alert from $userName';
+      final title = '🚨 MEDICAL EMERGENCY ALERT';
+
+      final response = await http.post(
+        Uri.parse(_baseUrl),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'service_id': _serviceId,
+          'template_id': _templateId,
+          'user_id': _publicKey,
+          'template_params': {
+            'to_email': recipientEmail,
+            'to_name': recipientName,
+            'subject': subject,
+            'title': title,
+            'message': message,
+            'app_name': 'Sugenix',
+            'support_email': 'support@sugenix.app',
+          },
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        print('✅ SOS email sent successfully to $recipientEmail');
+        return true;
+      } else {
+        print('❌ EmailJS SOS Error: ${response.statusCode} - ${response.body}');
+        return false;
+      }
+    } catch (e) {
+      print('❌ EmailJS SOS Exception: $e');
+      return false;
+    }
+  }
+}

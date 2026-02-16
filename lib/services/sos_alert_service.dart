@@ -1,7 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:sugenix/services/platform_location_service.dart';
-import 'package:http/http.dart' as http;
+import 'package:sugenix/services/emailjs_service.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:telephony/telephony.dart';
 
@@ -68,8 +68,9 @@ Sent from: Sugenix - Diabetes Management App
       print('Attempting to send SOS SMS to $phoneNumber');
 
       // Check/Request SMS permission
-      final bool? permissionsGranted = await _telephony.requestPhoneAndSmsPermissions;
-      
+      final bool? permissionsGranted =
+          await _telephony.requestPhoneAndSmsPermissions;
+
       if (permissionsGranted != true) {
         print('SMS permissions denied');
         return false;
@@ -78,7 +79,7 @@ Sent from: Sugenix - Diabetes Management App
       // Format phone number
       // 1. Remove all non-digit characters except +
       String cleanPhone = phoneNumber.replaceAll(RegExp(r'[^\d+]'), '');
-      
+
       // 2. If it doesn't start with +, and is 10 digits, assume India (+91)
       // This is a common requirement for many Indian carriers to send SMS
       if (!cleanPhone.startsWith('+')) {
@@ -89,15 +90,15 @@ Sent from: Sugenix - Diabetes Management App
           cleanPhone = '+$cleanPhone';
         }
       }
-      
+
       print('Sending SMS to $cleanPhone...');
-      
+
       await _telephony.sendSms(
         to: cleanPhone,
         message: message,
         isMultipart: true, // Handle long messages
       );
-      
+
       print('SMS sent successfully to $cleanPhone');
       return true;
     } catch (e) {
@@ -126,21 +127,24 @@ Sent from: Sugenix - Diabetes Management App
         return {
           'value': data['value'] ?? 0,
           'type': data['type'] ?? 'Unknown',
-          'timestamp': timestamp != null
-              ? timestamp.toDate()
-              : DateTime.now(),
+          'timestamp': timestamp != null ? timestamp.toDate() : DateTime.now(),
         };
       }).toList();
 
       // Sort in memory (descending)
-      readings.sort((a, b) => (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime));
+      readings.sort((a, b) =>
+          (b['timestamp'] as DateTime).compareTo(a['timestamp'] as DateTime));
 
       // Return top 3 formatted
-      return readings.take(3).map((r) => {
-        'value': r['value'],
-        'type': r['type'],
-        'timestamp': (r['timestamp'] as DateTime).toString().split('.').first,
-      }).toList();
+      return readings
+          .take(3)
+          .map((r) => {
+                'value': r['value'],
+                'type': r['type'],
+                'timestamp':
+                    (r['timestamp'] as DateTime).toString().split('.').first,
+              })
+          .toList();
     } catch (e) {
       print('Error fetching glucose readings: $e');
       return [];
@@ -298,16 +302,37 @@ Sent from: Sugenix - Diabetes Management App
             message: sosMessage,
           );
 
+          // Also send via EmailJS if email is available
+          final email = contact['email']?.toString() ?? '';
+          bool emailSuccess = false;
+          if (email.isNotEmpty) {
+            emailSuccess = await EmailJSService.sendSOSEmail(
+              recipientEmail: email,
+              recipientName: contactName,
+              userName: userName,
+              message: sosMessage,
+            );
+          }
+
           notificationResults.add({
             'contact': contactName,
             'phone': phoneNumber,
-            'status': success ? 'sent' : 'failed',
+            'email': email,
+            'status': (success || emailSuccess) ? 'sent' : 'failed',
+            'sms_status': success ? 'sent' : 'failed',
+            'email_status': email.isNotEmpty
+                ? (emailSuccess ? 'sent' : 'failed')
+                : 'not_available',
             'timestamp': DateTime.now().toIso8601String(),
           });
 
           notificationStatus[phoneNumber] = {
             'name': contactName,
-            'status': success ? 'sent' : 'failed',
+            'status': (success || emailSuccess) ? 'sent' : 'failed',
+            'sms_status': success ? 'sent' : 'failed',
+            'email_status': email.isNotEmpty
+                ? (emailSuccess ? 'sent' : 'failed')
+                : 'not_available',
             'timestamp': FieldValue.serverTimestamp(),
           };
         }

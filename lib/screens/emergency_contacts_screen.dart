@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sugenix/services/emergency_service.dart';
 import 'package:sugenix/utils/responsive_layout.dart';
 import 'package:sugenix/services/language_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class EmergencyContactsScreen extends StatefulWidget {
   const EmergencyContactsScreen({super.key});
@@ -15,6 +16,7 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen> {
   final EmergencyService _emergencyService = EmergencyService();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
   final TextEditingController _relationshipController = TextEditingController();
   List<Map<String, dynamic>> _contacts = [];
   bool _isAdding = false;
@@ -29,6 +31,7 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen> {
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
+    _emailController.dispose();
     _relationshipController.dispose();
     super.dispose();
   }
@@ -46,6 +49,7 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen> {
   Future<void> _addContact() async {
     if (_nameController.text.trim().isEmpty ||
         _phoneController.text.trim().isEmpty ||
+        _emailController.text.trim().isEmpty ||
         _relationshipController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -62,11 +66,13 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen> {
       await _emergencyService.addEmergencyContact(
         name: _nameController.text.trim(),
         phone: _phoneController.text.trim(),
+        email: _emailController.text.trim(),
         relationship: _relationshipController.text.trim(),
       );
 
       _nameController.clear();
       _phoneController.clear();
+      _emailController.clear();
       _relationshipController.clear();
 
       if (mounted) {
@@ -125,15 +131,26 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen> {
             ),
           );
         }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed to delete contact: ${e.toString()}'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
+      } catch (e) {}
+    }
+  }
+
+  Future<void> _callContact(String phoneNumber) async {
+    final Uri telUri = Uri(scheme: 'tel', path: phoneNumber);
+    try {
+      if (await canLaunchUrl(telUri)) {
+        await launchUrl(telUri);
+      } else {
+        throw 'Could not launch $phoneNumber';
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not initiate call: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }
@@ -178,6 +195,19 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen> {
                   hintText: 'e.g. +91 9876543210',
                   helperText: 'Include country code for best results',
                   prefixIcon: const Icon(Icons.phone),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 15),
+              TextField(
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: InputDecoration(
+                  labelText: 'Email Address',
+                  hintText: 'e.g. contact@example.com',
+                  prefixIcon: const Icon(Icons.email),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -231,7 +261,8 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen> {
           stream: LanguageService.currentLanguageStream,
           builder: (context, snapshot) {
             final languageCode = snapshot.data ?? 'en';
-            final title = LanguageService.translate('emergency_contacts', languageCode);
+            final title =
+                LanguageService.translate('emergency_contacts', languageCode);
             return Text(
               title == 'emergency_contacts' ? 'Emergency Contacts' : title,
               style: TextStyle(
@@ -253,60 +284,59 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen> {
         ),
       ),
       body: Column(
-              children: [
-                Expanded(
-                  child: _contacts.isEmpty
-                      ? _buildEmptyState()
-                      : ListView.builder(
-                          padding:
-                              ResponsiveHelper.getResponsivePadding(context),
-                          itemCount: _contacts.length,
-                          itemBuilder: (context, index) {
-                            return _buildContactCard(_contacts[index], index);
-                          },
-                        ),
-                ),
-                Container(
-                  padding: ResponsiveHelper.getResponsivePadding(context),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 10,
-                        offset: const Offset(0, -2),
-                      ),
-                    ],
+        children: [
+          Expanded(
+            child: _contacts.isEmpty
+                ? _buildEmptyState()
+                : ListView.builder(
+                    padding: ResponsiveHelper.getResponsivePadding(context),
+                    itemCount: _contacts.length,
+                    itemBuilder: (context, index) {
+                      return _buildContactCard(_contacts[index], index);
+                    },
                   ),
-                  child: SizedBox(
-                    width: double.infinity,
-                    height: ResponsiveHelper.isMobile(context) ? 50 : 55,
-                    child: ElevatedButton.icon(
-                      onPressed: _showAddContactDialog,
-                      icon: const Icon(Icons.add),
-                      label: Text(
-                        'Add Emergency Contact',
-                        style: TextStyle(
-                          fontSize: ResponsiveHelper.getResponsiveFontSize(
-                            context,
-                            mobile: 14,
-                            tablet: 16,
-                            desktop: 18,
-                          ),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0C4556),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                    ),
-                  ),
+          ),
+          Container(
+            padding: ResponsiveHelper.getResponsivePadding(context),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, -2),
                 ),
               ],
             ),
+            child: SizedBox(
+              width: double.infinity,
+              height: ResponsiveHelper.isMobile(context) ? 50 : 55,
+              child: ElevatedButton.icon(
+                onPressed: _showAddContactDialog,
+                icon: const Icon(Icons.add),
+                label: Text(
+                  'Add Emergency Contact',
+                  style: TextStyle(
+                    fontSize: ResponsiveHelper.getResponsiveFontSize(
+                      context,
+                      mobile: 14,
+                      tablet: 16,
+                      desktop: 18,
+                    ),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0C4556),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -425,6 +455,23 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen> {
                     color: Colors.grey[700],
                   ),
                 ),
+                if (contact['email'] != null &&
+                    contact['email'].toString().isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4.0),
+                    child: Text(
+                      contact['email'],
+                      style: TextStyle(
+                        fontSize: ResponsiveHelper.getResponsiveFontSize(
+                          context,
+                          mobile: 12,
+                          tablet: 13,
+                          desktop: 14,
+                        ),
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ),
                 SizedBox(height: ResponsiveHelper.isMobile(context) ? 4 : 5),
                 Text(
                   contact['relationship'] ?? '',
@@ -441,9 +488,17 @@ class _EmergencyContactsScreenState extends State<EmergencyContactsScreen> {
               ],
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.delete, color: Colors.red),
-            onPressed: () => _deleteContact(index),
+          Column(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.phone, color: Color(0xFF0C4556)),
+                onPressed: () => _callContact(contact['phone'] ?? ''),
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete, color: Colors.red),
+                onPressed: () => _deleteContact(index),
+              ),
+            ],
           ),
         ],
       ),

@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:sugenix/services/platform_location_service.dart';
+import 'package:sugenix/services/emailjs_service.dart';
 
 class EmergencyService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -12,6 +13,14 @@ class EmergencyService {
   Future<void> sendEmergencyAlert({String? customMessage}) async {
     try {
       if (_auth.currentUser == null) throw Exception('No user logged in');
+
+      // Get user data for name
+      DocumentSnapshot userDoc = await _firestore
+          .collection('users')
+          .doc(_auth.currentUser!.uid)
+          .get();
+      String userName =
+          (userDoc.data() as Map<String, dynamic>?)?['name'] ?? 'User';
 
       // Get user's current location
       Position? position = await PlatformLocationService.getCurrentLocation();
@@ -52,6 +61,7 @@ class EmergencyService {
         position,
         recentReadings,
         customMessage,
+        userName,
       );
     } catch (e) {
       throw Exception('Failed to send emergency alert: ${e.toString()}');
@@ -109,6 +119,7 @@ class EmergencyService {
     Position? position,
     List<Map<String, dynamic>> glucoseReadings,
     String? customMessage,
+    String userName,
   ) async {
     try {
       String locationText = position != null
@@ -131,8 +142,22 @@ Please check on the user immediately!
 ''';
 
       for (Map<String, dynamic> contact in contacts) {
-        String phone = contact['phone'] as String;
-        await _sendSMS(phone, message);
+        String? phone = contact['phone'] as String?;
+        String? email = contact['email'] as String?;
+        String contactName = contact['name'] as String? ?? 'Emergency Contact';
+
+        if (phone != null && phone.isNotEmpty) {
+          await _sendSMS(phone, message);
+        }
+
+        if (email != null && email.isNotEmpty) {
+          await EmailJSService.sendSOSEmail(
+            recipientEmail: email,
+            recipientName: contactName,
+            userName: userName,
+            message: message,
+          );
+        }
       }
     } catch (e) {
       // Continue even if SMS fails
@@ -266,6 +291,7 @@ Please check on the user immediately!
   Future<void> addEmergencyContact({
     required String name,
     required String phone,
+    String? email,
     required String relationship,
   }) async {
     try {
@@ -279,6 +305,7 @@ Please check on the user immediately!
           {
             'name': name,
             'phone': phone,
+            'email': email ?? '',
             'relationship': relationship,
             'addedAt': DateTime.now().toUtc(),
           },
