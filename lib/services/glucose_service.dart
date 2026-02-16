@@ -36,30 +36,23 @@ class GlucoseService {
     if (_auth.currentUser == null) return Stream.value([]);
     final userId = _auth.currentUser!.uid;
 
-    return _firestore.collection('glucose_readings').snapshots().map(
+    // Optimized: Filter by userId in query
+    return _firestore
+        .collection('glucose_readings')
+        .where('userId', isEqualTo: userId)
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .map(
       (snapshot) {
-        final allReadings = snapshot.docs.map((doc) {
+        return snapshot.docs.map((doc) {
           Map<String, dynamic> data = doc.data();
           data['id'] = doc.id;
+          // Handle potential null/missing timestamp
+          if (data['timestamp'] == null) {
+            data['timestamp'] = Timestamp.fromDate(DateTime.now());
+          }
           return data;
         }).toList();
-
-        // Filter by userId and sort by timestamp
-        final filtered =
-            allReadings.where((r) => r['userId'] == userId).toList();
-        filtered.sort((a, b) {
-          final aTime = a['timestamp'];
-          final bTime = b['timestamp'];
-          if (aTime == null || bTime == null) return 0;
-          final aDate = aTime is Timestamp
-              ? aTime.toDate()
-              : (aTime is DateTime ? aTime : DateTime.now());
-          final bDate = bTime is Timestamp
-              ? bTime.toDate()
-              : (bTime is DateTime ? bTime : DateTime.now());
-          return bDate.compareTo(aDate); // Descending
-        });
-        return filtered;
       },
     );
   }
@@ -71,10 +64,13 @@ class GlucoseService {
   }) async {
     try {
       if (_auth.currentUser == null) throw Exception('No user logged in');
-
-      QuerySnapshot snapshot =
-          await _firestore.collection('glucose_readings').get();
       final userId = _auth.currentUser!.uid;
+
+      // Optimized: Filter by userId first
+      QuerySnapshot snapshot = await _firestore
+          .collection('glucose_readings')
+          .where('userId', isEqualTo: userId)
+          .get();
 
       final allReadings = snapshot.docs.map((doc) {
         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
@@ -82,9 +78,9 @@ class GlucoseService {
         return data;
       }).toList();
 
-      // Filter by userId and date range, then sort
+      // Filter by date range client-side (to avoid composite index requirement)
+      // Ideally, use a composite index for userId + timestamp
       final filtered = allReadings.where((r) {
-        if (r['userId'] != userId) return false;
         final timestamp = r['timestamp'];
         if (timestamp == null) return false;
         final date = timestamp is Timestamp
@@ -153,23 +149,27 @@ class GlucoseService {
   Future<Map<String, dynamic>> getGlucoseStatistics({int days = 30}) async {
     try {
       if (_auth.currentUser == null) throw Exception('No user logged in');
-
-      QuerySnapshot snapshot =
-          await _firestore.collection('glucose_readings').get();
       final userId = _auth.currentUser!.uid;
 
-      // Filter by userId and date range
+      // Optimized: Filter by userId in query
+      QuerySnapshot snapshot = await _firestore
+          .collection('glucose_readings')
+          .where('userId', isEqualTo: userId)
+          .get();
+
+      // Filter by date range client-side
+      final endDate = DateTime.now();
+      final startDate = endDate.subtract(Duration(days: days));
+
       final filteredDocs = snapshot.docs.where((doc) {
         final data = doc.data() as Map<String, dynamic>;
-        if (data['userId'] != userId) return false;
         final timestamp = data['timestamp'];
         if (timestamp == null) return false;
         final date = timestamp is Timestamp
             ? timestamp.toDate()
             : (timestamp is DateTime ? timestamp : null);
         if (date == null) return false;
-        final endDate = DateTime.now();
-        final startDate = endDate.subtract(Duration(days: days));
+
         return date.isAfter(startDate.subtract(const Duration(seconds: 1))) &&
             date.isBefore(endDate.add(const Duration(days: 1)));
       }).toList();

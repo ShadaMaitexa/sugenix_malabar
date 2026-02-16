@@ -16,9 +16,6 @@ class _PharmacyDashboardScreenState extends State<PharmacyDashboardScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // Dashboard no longer hosts the add-medicine form directly.
-  // The form has been moved to a reusable screen/widget and will be opened
-  // from Inventory FAB or via the button below.
   List<Map<String, dynamic>> _medicines = [];
   int _totalOrders = 0;
   double _totalRevenue = 0.0;
@@ -47,7 +44,6 @@ class _PharmacyDashboardScreenState extends State<PharmacyDashboardScreen> {
         final data = doc.data();
         if (data['status'] != 'cancelled') {
           totalOrders++;
-          // Use pharmacyAmount (after platform fee deduction) for revenue
           revenue += (data['pharmacyAmount'] as num?)?.toDouble() ??
               ((data['total'] as num?)?.toDouble() ?? 0.0);
         }
@@ -90,7 +86,6 @@ class _PharmacyDashboardScreenState extends State<PharmacyDashboardScreen> {
 
   Future<void> _addMedicine() async {
     // Form handling moved to `PharmacyAddMedicineForm`.
-    // Keep placeholder to maintain API surface if other code calls this method.
   }
 
   void _clearForm() {
@@ -143,7 +138,6 @@ class _PharmacyDashboardScreenState extends State<PharmacyDashboardScreen> {
 
   @override
   void dispose() {
-    // No form controllers to dispose here anymore.
     super.dispose();
   }
 
@@ -153,8 +147,8 @@ class _PharmacyDashboardScreenState extends State<PharmacyDashboardScreen> {
       appBar: AppBar(
         title: const Text(
           'Pharmacy Dashboard',
-          style: TextStyle(
-              color: Color(0xFF0C4556), fontWeight: FontWeight.bold),
+          style:
+              TextStyle(color: Color(0xFF0C4556), fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF0C4556),
@@ -171,89 +165,160 @@ class _PharmacyDashboardScreenState extends State<PharmacyDashboardScreen> {
   }
 
   Widget _buildInteractiveAddPanel() {
-    // Dummy interactive cards that match the current app style. Each card
-    // shows sample product info and a CTA to open the real Add Medicine form.
-    final sample = {
-      'name': 'Metformin XR',
-      'manufacturer': 'HealthCorp',
-      'price': 199.0,
-      'stock': 42,
-      'uses': ['Diabetes management'],
-    };
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Quick Add (Preview)',
-              style: TextStyle(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Recent Inventory',
+                style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF0C4556))),
-          const SizedBox(height: 12),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                children: [
-                  Container(
-                    width: 64,
-                    height: 64,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0C4556).withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child:
-                        const Icon(Icons.medication, color: Color(0xFF0C4556)),
+                  color: Color(0xFF0C4556),
+                ),
+              ),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const PharmacyAddMedicineForm()),
+                  );
+                },
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Add New'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0C4556),
+                  foregroundColor: Colors.white,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: _medicines.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.inventory_2_outlined,
+                          size: 48, color: Colors.grey[300]),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No medicines in inventory',
+                        style: TextStyle(color: Colors.grey[500]),
+                      ),
+                      const SizedBox(height: 8),
+                      OutlinedButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) =>
+                                    const PharmacyAddMedicineForm()),
+                          );
+                        },
+                        child: const Text('Add First Medicine'),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(sample['name']! as String,
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: _medicines.length,
+                  itemBuilder: (context, index) {
+                    final medicine = _medicines[index];
+                    final name = (medicine['name'] as String?) ?? 'Unknown';
+                    final manufacturer =
+                        (medicine['manufacturer'] as String?) ?? '';
+                    final price =
+                        (medicine['price'] as num?)?.toDouble() ?? 0.0;
+                    final stock = (medicine['stock'] as int?) ?? 0;
+                    final id = medicine['id'] as String;
+
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      elevation: 2,
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.all(12),
+                        leading: Container(
+                          width: 50,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0C4556).withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.medication,
+                              color: Color(0xFF0C4556)),
+                        ),
+                        title: Text(name,
                             style:
                                 const TextStyle(fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 6),
-                        Text('${sample['manufacturer']} • ₹${sample['price']}',
-                            style: const TextStyle(color: Colors.grey)),
-                        const SizedBox(height: 6),
-                        Text('Stock: ${sample['stock']}',
-                            style: TextStyle(
-                                color: ((sample['stock'] as int?) ?? 0) > 10
-                                    ? Colors.green
-                                    : Colors.red)),
-                      ],
-                    ),
-                  ),
-                  ElevatedButton(
-                    onPressed: () {
-                      // Open the reusable Add Medicine form
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const PharmacyAddMedicineForm()),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0C4556)),
-                    child: const Text('Open Form'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text('Tips',
-              style: TextStyle(
-                  fontWeight: FontWeight.bold, color: Colors.grey[700])),
-          const SizedBox(height: 8),
-          Text(
-              '• Use the form to add medicines with accurate stock and pricing.'),
-          Text('• Manage your inventory from the Inventory screen.'),
-        ],
-      ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 4),
+                            Text(
+                              manufacturer.isNotEmpty
+                                  ? '$manufacturer • ₹${price.toStringAsFixed(2)}'
+                                  : '₹${price.toStringAsFixed(2)}',
+                              style: TextStyle(
+                                  color: Colors.grey[600], fontSize: 13),
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: stock > 10
+                                        ? Colors.green
+                                        : (stock > 0
+                                            ? Colors.orange
+                                            : Colors.red),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  stock > 0
+                                      ? '$stock in stock'
+                                      : 'Out of stock',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                    color: stock > 10
+                                        ? Colors.green
+                                        : (stock > 0
+                                            ? Colors.orange
+                                            : Colors.red),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete_outline,
+                              color: Colors.red),
+                          onPressed: () => _deleteMedicine(id),
+                          tooltip: 'Delete',
+                        ),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
     );
   }
 
@@ -334,51 +399,4 @@ class _PharmacyDashboardScreenState extends State<PharmacyDashboardScreen> {
       ),
     );
   }
-
-  // The original add-medicine form was moved to a reusable screen
-  // (`PharmacyAddMedicineForm`) and is opened from this dashboard's
-  // interactive panel or from the Inventory FAB. The large inline form
-  // has been removed to avoid duplicated controllers and compilation errors.
-
-  Widget _buildMedicinesList() {
-    if (_medicines.isEmpty) {
-      return const Center(
-        child: Text('No medicines added yet',
-            style: TextStyle(color: Colors.grey)),
-      );
-    }
-
-    return ListView.builder(
-      padding: ResponsiveHelper.getResponsivePadding(context),
-      itemCount: _medicines.length,
-      itemBuilder: (context, index) {
-        final medicine = _medicines[index];
-        return Card(
-          margin: const EdgeInsets.only(bottom: 12),
-          child: ListTile(
-            leading: const Icon(Icons.medication, color: Color(0xFF0C4556)),
-            title: Text(
-              medicine['name'] ?? 'Unknown',
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('₹${(medicine['price'] ?? 0.0).toStringAsFixed(2)}'),
-                if (medicine['requiresPrescription'] == true)
-                  const Text('Prescription Required',
-                      style: TextStyle(color: Colors.orange, fontSize: 12)),
-              ],
-            ),
-            trailing: IconButton(
-              icon: const Icon(Icons.delete, color: Colors.red),
-              onPressed: () => _deleteMedicine(medicine['id']),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  // Dashboard does not need the inline text field helper anymore.
 }

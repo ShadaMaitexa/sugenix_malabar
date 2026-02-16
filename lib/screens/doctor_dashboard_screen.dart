@@ -35,8 +35,10 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
     }
 
     try {
+      // Optimized: Fetch only this doctor's appointments
       final snap = await _firestore
           .collection('appointments')
+          .where('doctorId', isEqualTo: id)
           .get();
 
       final now = DateTime.now();
@@ -85,52 +87,59 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
   Stream<List<QueryDocumentSnapshot<Map<String, dynamic>>>> _appointments() {
     final id = _uid;
     if (id == null) return Stream.value([]);
+    // Optimized: Filter by doctorId in query
     return _firestore
         .collection('appointments')
+        .where('doctorId', isEqualTo: id)
         .snapshots()
         .map((snapshot) {
-      // Filter by doctorId and sort by dateTime
-      final filtered = snapshot.docs.where((doc) {
-        final data = doc.data();
-        return data['doctorId'] == id;
-      }).toList();
-      
-      filtered.sort((a, b) {
+      final docs = snapshot.docs;
+
+      // Sort client-side to avoid composite index requirement for now
+      docs.sort((a, b) {
         final aTime = a.data()['dateTime'];
         final bTime = b.data()['dateTime'];
         if (aTime == null || bTime == null) return 0;
-        final aDate = aTime is Timestamp ? aTime.toDate() : (aTime is DateTime ? aTime : DateTime.now());
-        final bDate = bTime is Timestamp ? bTime.toDate() : (bTime is DateTime ? bTime : DateTime.now());
+        final aDate = aTime is Timestamp
+            ? aTime.toDate()
+            : (aTime is DateTime ? aTime : DateTime.now());
+        final bDate = bTime is Timestamp
+            ? bTime.toDate()
+            : (bTime is DateTime ? bTime : DateTime.now());
         return aDate.compareTo(bDate); // Ascending
       });
-      
-      return filtered.take(50).toList();
+
+      return docs.toList();
     });
   }
 
   Stream<List<QueryDocumentSnapshot<Map<String, dynamic>>>> _records() {
     final id = _uid;
     if (id == null) return Stream.value([]);
+    // Optimized: Filter by doctorId in query
+    // Note: This relies on medical_records having a 'doctorId' field when shared/created
+    // If not, it will return empty, which is safer than returning ALL records.
     return _firestore
         .collection('medical_records')
+        .where('doctorId', isEqualTo: id)
         .snapshots()
         .map((snapshot) {
-      // Filter by doctorId and sort by recordDate
-      final filtered = snapshot.docs.where((doc) {
-        final data = doc.data();
-        return data['doctorId'] == id;
-      }).toList();
-      
-      filtered.sort((a, b) {
+      final docs = snapshot.docs;
+
+      docs.sort((a, b) {
         final aTime = a.data()['recordDate'];
         final bTime = b.data()['recordDate'];
         if (aTime == null || bTime == null) return 0;
-        final aDate = aTime is Timestamp ? aTime.toDate() : (aTime is DateTime ? aTime : DateTime.now());
-        final bDate = bTime is Timestamp ? bTime.toDate() : (bTime is DateTime ? bTime : DateTime.now());
+        final aDate = aTime is Timestamp
+            ? aTime.toDate()
+            : (aTime is DateTime ? aTime : DateTime.now());
+        final bDate = bTime is Timestamp
+            ? bTime.toDate()
+            : (bTime is DateTime ? bTime : DateTime.now());
         return bDate.compareTo(aDate); // Descending
       });
-      
-      return filtered.take(50).toList();
+
+      return docs.toList();
     });
   }
 
@@ -274,8 +283,8 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
   Widget _buildAppointmentsTab() {
     return StreamBuilder<List<QueryDocumentSnapshot<Map<String, dynamic>>>>(
       stream: _appointments(),
-        builder: (context, snapshot) {
-          final docs = snapshot.data ?? [];
+      builder: (context, snapshot) {
+        final docs = snapshot.data ?? [];
         if (docs.isEmpty) {
           return const Center(
             child: Text(
@@ -322,7 +331,8 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                     color: const Color(0xFF0C4556).withOpacity(0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.calendar_today, color: Color(0xFF0C4556)),
+                  child: const Icon(Icons.calendar_today,
+                      color: Color(0xFF0C4556)),
                 ),
                 title: Text(
                   patient,
@@ -336,7 +346,8 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                   style: const TextStyle(color: Colors.grey),
                 ),
                 trailing: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: Colors.blue.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(10),
@@ -379,7 +390,8 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
           ),
         ),
         Expanded(
-          child: StreamBuilder<List<QueryDocumentSnapshot<Map<String, dynamic>>>>(
+          child:
+              StreamBuilder<List<QueryDocumentSnapshot<Map<String, dynamic>>>>(
             stream: _records(),
             builder: (context, snapshot) {
               final docs = snapshot.data ?? [];
@@ -398,8 +410,10 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                 itemBuilder: (context, index) {
                   final data = docs[index].data();
                   final title = (data['title'] as String?) ?? 'Record';
-                  final type = (data['recordType'] as String?) ?? (data['type'] as String? ?? 'General');
-                  final patient = (data['patientName'] as String?) ?? (data['userId'] as String? ?? '');
+                  final type = (data['recordType'] as String?) ??
+                      (data['type'] as String? ?? 'General');
+                  final patient = (data['patientName'] as String?) ??
+                      (data['userId'] as String? ?? '');
                   final recordDate = data['recordDate'];
                   DateTime? date;
                   if (recordDate is Timestamp) {
@@ -434,7 +448,8 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
                           color: const Color(0xFF4CAF50).withOpacity(0.12),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(Icons.description, color: Color(0xFF4CAF50)),
+                        child: const Icon(Icons.description,
+                            color: Color(0xFF4CAF50)),
                       ),
                       title: Text(
                         title,
@@ -462,4 +477,3 @@ class _DoctorDashboardScreenState extends State<DoctorDashboardScreen> {
     );
   }
 }
-

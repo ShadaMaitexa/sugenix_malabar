@@ -17,22 +17,24 @@ class MedicalRecordsService {
     required List<XFile> images,
   }) async {
     try {
+      if (_auth.currentUser == null) throw Exception('No user logged in');
+      final userId = _auth.currentUser!.uid;
+
       // Upload images to Cloudinary
       List<String> imageUrls = await CloudinaryService.uploadImages(images);
 
       // Add record to Firestore
-      if (_auth.currentUser == null) throw Exception('No user logged in');
-      
       await _firestore.collection('medical_records').add({
         'title': title,
         'description': description,
         'recordType': recordType,
         'recordDate': recordDate,
-        'addedBy': _auth.currentUser!.uid,
+        'addedBy': userId,
         'addedByName': addedBy,
         'imageUrls': imageUrls,
-        'userId': _auth.currentUser!.uid,
+        'userId': userId,
         'createdAt': FieldValue.serverTimestamp(),
+        'isActive': true,
       });
     } catch (e) {
       throw Exception('Failed to add medical record: $e');
@@ -42,34 +44,26 @@ class MedicalRecordsService {
   // Get medical records for current user
   Stream<List<Map<String, dynamic>>> getMedicalRecords() {
     if (_auth.currentUser == null) return Stream.value([]);
-    
+
     final userId = _auth.currentUser!.uid;
+    // Optimized: Filter by userId and isActive
     return _firestore
         .collection('medical_records')
+        .where('userId', isEqualTo: userId)
+        .where('isActive', isEqualTo: true) // Filter out deleted records
+        .orderBy('createdAt', descending: true)
         .snapshots()
         .map(
-          (snapshot) {
-            final allRecords = snapshot.docs.map((doc) {
-              final data = doc.data();
-              return {
-                'id': doc.id,
-                ...data,
-              };
-            }).toList();
-            
-            // Filter by userId and sort by createdAt
-            final filtered = allRecords.where((r) => r['userId'] == userId).toList();
-            filtered.sort((a, b) {
-              final aTime = a['createdAt'];
-              final bTime = b['createdAt'];
-              if (aTime == null || bTime == null) return 0;
-              final aDate = aTime is Timestamp ? aTime.toDate() : (aTime is DateTime ? aTime : DateTime.now());
-              final bDate = bTime is Timestamp ? bTime.toDate() : (bTime is DateTime ? bTime : DateTime.now());
-              return bDate.compareTo(aDate); // Descending
-            });
-            return filtered;
-          },
-        );
+      (snapshot) {
+        return snapshot.docs.map((doc) {
+          final data = doc.data();
+          return {
+            'id': doc.id,
+            ...data,
+          };
+        }).toList();
+      },
+    );
   }
 
   // Get medical record by ID
@@ -150,34 +144,36 @@ class MedicalRecordsService {
   Future<Map<String, dynamic>> getMedicalRecordsStatistics() async {
     try {
       if (_auth.currentUser == null) throw Exception('No user logged in');
-      
-      QuerySnapshot snapshot = await _firestore
-          .collection('medical_records')
-          .get();
       final userId = _auth.currentUser!.uid;
 
-      // Filter by userId
-      final filteredDocs = snapshot.docs.where((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        return data['userId'] == userId;
-      }).toList();
+      // Optimized: Filter by userId and isActive
+      QuerySnapshot snapshot = await _firestore
+          .collection('medical_records')
+          .where('userId', isEqualTo: userId)
+          .where('isActive', isEqualTo: true)
+          .get();
 
-      int totalRecords = filteredDocs.length;
+      int totalRecords = snapshot.docs.length;
       int reports = 0;
       int prescriptions = 0;
       int invoices = 0;
 
-      for (var doc in filteredDocs) {
+      for (var doc in snapshot.docs) {
         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-        String type = data['type'] as String;
+        String type =
+            (data['recordType'] as String? ?? data['type'] as String? ?? '')
+                .toLowerCase();
+
         switch (type) {
           case 'report':
+          case 'lab_report':
             reports++;
             break;
           case 'prescription':
             prescriptions++;
             break;
           case 'invoice':
+          case 'bill':
             invoices++;
             break;
         }
@@ -200,32 +196,34 @@ class MedicalRecordsService {
   Future<List<Map<String, dynamic>>> searchMedicalRecords(String query) async {
     try {
       if (_auth.currentUser == null) throw Exception('No user logged in');
-      
-      QuerySnapshot snapshot = await _firestore
-          .collection('medical_records')
-          .get();
       final userId = _auth.currentUser!.uid;
 
-      // Filter by userId
-      final filteredDocs = snapshot.docs.where((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        return data['userId'] == userId;
-      }).toList();
+      // Optimized: Filter by userId and isActive
+      QuerySnapshot snapshot = await _firestore
+          .collection('medical_records')
+          .where('userId', isEqualTo: userId)
+          .where('isActive', isEqualTo: true)
+          .get();
 
       List<Map<String, dynamic>> results = [];
+      String lowerQuery = query.toLowerCase();
 
-      for (var doc in filteredDocs) {
+      for (var doc in snapshot.docs) {
         Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
         String title = (data['title'] as String? ?? '').toLowerCase();
         String description =
             (data['description'] as String? ?? '').toLowerCase();
-        String type = (data['type'] as String? ?? '').toLowerCase();
+        String type =
+            (data['recordType'] as String? ?? data['type'] as String? ?? '')
+                .toLowerCase();
 
-        if (title.contains(query.toLowerCase()) ||
-            description.contains(query.toLowerCase()) ||
-            type.contains(query.toLowerCase())) {
-          data['id'] = doc.id;
-          results.add(data);
+        if (title.contains(lowerQuery) ||
+            description.contains(lowerQuery) ||
+            type.contains(lowerQuery)) {
+          results.add({
+            'id': doc.id,
+            ...data,
+          });
         }
       }
 
@@ -239,7 +237,7 @@ class MedicalRecordsService {
   Future<String> generateShareableLink(String recordId) async {
     try {
       // In a real implementation, you would create a secure shareable link
-      // For now, we'll return a placeholder
+      // e.g. using Firebase Dynamic Links or a dedicated collection for shared links
       return 'https://sugenix.app/medical-record/$recordId';
     } catch (e) {
       throw Exception('Failed to generate shareable link: ${e.toString()}');
@@ -254,31 +252,43 @@ class MedicalRecordsService {
   }) async {
     try {
       if (_auth.currentUser == null) throw Exception('No user logged in');
-      
-      QuerySnapshot snapshot =
-          await _firestore.collection('medical_records').get();
       final userId = _auth.currentUser!.uid;
 
-      // Filter by userId, date range, and type
+      // Optimized: Filter by userId and isActive
+      QuerySnapshot snapshot = await _firestore
+          .collection('medical_records')
+          .where('userId', isEqualTo: userId)
+          .where('isActive', isEqualTo: true)
+          .get();
+
+      // Filter by date range and type client-side
       final filteredDocs = snapshot.docs.where((doc) {
         final data = doc.data() as Map<String, dynamic>;
-        if (data['userId'] != userId) return false;
-        
+
         if (startDate != null) {
           final createdAt = data['createdAt'];
           if (createdAt != null) {
-            final date = createdAt is Timestamp ? createdAt.toDate() : (createdAt is DateTime ? createdAt : null);
-            if (date != null && date.isBefore(startDate.subtract(const Duration(seconds: 1)))) return false;
+            final date = createdAt is Timestamp
+                ? createdAt.toDate()
+                : (createdAt is DateTime ? createdAt : null);
+            if (date != null &&
+                date.isBefore(startDate.subtract(const Duration(seconds: 1))))
+              return false;
           }
         }
         if (endDate != null) {
           final createdAt = data['createdAt'];
           if (createdAt != null) {
-            final date = createdAt is Timestamp ? createdAt.toDate() : (createdAt is DateTime ? createdAt : null);
-            if (date != null && date.isAfter(endDate.add(const Duration(days: 1)))) return false;
+            final date = createdAt is Timestamp
+                ? createdAt.toDate()
+                : (createdAt is DateTime ? createdAt : null);
+            if (date != null &&
+                date.isAfter(endDate.add(const Duration(days: 1))))
+              return false;
           }
         }
-        if (type != null && data['type'] != type) return false;
+        if (type != null && data['recordType'] != type && data['type'] != type)
+          return false;
         return true;
       }).toList();
 
@@ -287,17 +297,21 @@ class MedicalRecordsService {
         data['id'] = doc.id;
         return data;
       }).toList();
-      
+
       // Sort by createdAt descending
       results.sort((a, b) {
         final aTime = a['createdAt'];
         final bTime = b['createdAt'];
         if (aTime == null || bTime == null) return 0;
-        final aDate = aTime is Timestamp ? aTime.toDate() : (aTime is DateTime ? aTime : DateTime.now());
-        final bDate = bTime is Timestamp ? bTime.toDate() : (bTime is DateTime ? bTime : DateTime.now());
+        final aDate = aTime is Timestamp
+            ? aTime.toDate()
+            : (aTime is DateTime ? aTime : DateTime.now());
+        final bDate = bTime is Timestamp
+            ? bTime.toDate()
+            : (bTime is DateTime ? bTime : DateTime.now());
         return bDate.compareTo(aDate);
       });
-      
+
       return results;
     } catch (e) {
       throw Exception('Failed to export medical records: ${e.toString()}');

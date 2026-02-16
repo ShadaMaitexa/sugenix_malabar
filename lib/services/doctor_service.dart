@@ -8,16 +8,14 @@ class DoctorService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   Stream<List<Doctor>> streamDoctors() {
-    return _db.collection('doctors').snapshots().map((snapshot) {
-      // Filter by approvalStatus before converting to Doctor objects
-      final approvedDocs = snapshot.docs.where((doc) {
+    // Optimized: Filter by approvalStatus in query
+    return _db
+        .collection('doctors')
+        .where('approvalStatus', isEqualTo: 'approved')
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
         final data = doc.data();
-        return (data['approvalStatus'] as String?) == 'approved';
-      }).toList();
-
-      return approvedDocs.map((doc) {
-        final data = doc.data();
-        // Ensure id field presence
         return Doctor.fromJson({
           'id': data['id'] ?? doc.id,
           ...data,
@@ -27,14 +25,13 @@ class DoctorService {
   }
 
   Future<List<Doctor>> getDoctors() async {
-    final snapshot = await _db.collection('doctors').get();
-    // Filter by approvalStatus before converting to Doctor objects
-    final approvedDocs = snapshot.docs.where((doc) {
-      final data = doc.data();
-      return (data['approvalStatus'] as String?) == 'approved';
-    }).toList();
+    // Optimized: Filter by approvalStatus in query
+    final snapshot = await _db
+        .collection('doctors')
+        .where('approvalStatus', isEqualTo: 'approved')
+        .get();
 
-    return approvedDocs.map((doc) {
+    return snapshot.docs.map((doc) {
       final data = doc.data();
       return Doctor.fromJson({
         'id': data['id'] ?? doc.id,
@@ -45,19 +42,19 @@ class DoctorService {
 
   // Get pending doctors for admin approval
   Stream<List<Map<String, dynamic>>> getPendingDoctors() {
-    return _db.collection('doctors').snapshots().map((snapshot) {
-      final allDoctors = snapshot.docs.map((doc) {
+    // Optimized: Filter by approvalStatus in query
+    return _db
+        .collection('doctors')
+        .where('approvalStatus', isEqualTo: 'pending')
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
         final data = doc.data();
         return {
           'id': doc.id,
           ...data,
         };
       }).toList();
-
-      // Filter by approvalStatus
-      return allDoctors
-          .where((d) => (d['approvalStatus'] as String?) == 'pending')
-          .toList();
     });
   }
 
@@ -73,9 +70,10 @@ class DoctorService {
     final userDoc = await _db.collection('users').doc(doctorId).get();
     final userData = userDoc.data();
     String? userEmail = userData?['email'] as String?;
-    
+
     // If email not in users collection, try to get from current user if it matches
-    if ((userEmail == null || userEmail.isEmpty) && _auth.currentUser?.uid == doctorId) {
+    if ((userEmail == null || userEmail.isEmpty) &&
+        _auth.currentUser?.uid == doctorId) {
       userEmail = _auth.currentUser?.email;
     }
 
