@@ -1373,7 +1373,7 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
             const Icon(Icons.check_circle, color: Colors.green, size: 60),
             const SizedBox(height: 20),
             Text(
-              "Appointment Booked Successfully!",
+              "Appointment booked slot successfully",
               style: TextStyle(
                 fontSize: ResponsiveHelper.getResponsiveFontSize(
                   context,

@@ -778,7 +778,7 @@ class _CartScreenState extends State<CartScreen> {
                       ),
                       const SizedBox(height: 24),
                       const Text(
-                        'Order Placed Successfully',
+                        'Order placed successfully',
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
