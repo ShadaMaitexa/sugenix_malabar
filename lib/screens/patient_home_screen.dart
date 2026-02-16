@@ -40,11 +40,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
       _userProfile = await _authService.getUserProfile();
       // Load glucose readings stream for potential future use
       _glucoseService.getGlucoseReadings().listen((readings) {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-        }
+        // Glucose readings updated
       });
       _doctorService.streamDoctors().listen((doctors) {
         if (mounted) {
@@ -53,10 +49,18 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
           });
         }
       });
+
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 

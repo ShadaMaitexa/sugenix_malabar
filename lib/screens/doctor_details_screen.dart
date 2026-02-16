@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:sugenix/services/chat_service.dart';
+import 'package:sugenix/screens/chat_screen.dart';
 import 'package:sugenix/models/doctor.dart';
 import 'package:sugenix/utils/responsive_layout.dart';
 import 'package:intl/intl.dart';
@@ -248,29 +251,98 @@ class DoctorDetailsScreen extends StatelessWidget {
       ),
       width: double.infinity,
       height: ResponsiveHelper.isMobile(context) ? 50 : 55,
-      child: ElevatedButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => AppointmentBookingScreen(doctor: doctor),
+      child: Row(
+        children: [
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: () async {
+                final auth = FirebaseAuth.instance;
+                if (auth.currentUser == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please login to chat')),
+                  );
+                  return;
+                }
+
+                final chatService = ChatService();
+                final canChat = await chatService.canStartChat(
+                  doctor.id,
+                  auth.currentUser!.uid,
+                );
+
+                if (context.mounted) {
+                  if (canChat) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => ChatScreen(
+                          doctorId: doctor.id,
+                          doctorName: doctor.name,
+                          patientId: auth.currentUser!.uid,
+                        ),
+                      ),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                            'You can only chat with doctors you have an appointment with.'),
+                        backgroundColor: Colors.orange,
+                        duration: Duration(seconds: 3),
+                      ),
+                    );
+                  }
+                }
+              },
+              icon: const Icon(Icons.chat, color: Color(0xFF0C4556)),
+              label: const Text(
+                "Chat",
+                style: TextStyle(
+                  color: Color(0xFF0C4556),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Color(0xFF0C4556), width: 2),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
             ),
-          );
-        },
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF0C4556),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
           ),
-        ),
-        child: const Text(
-          "Book Now",
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
+          const SizedBox(width: 15),
+          Expanded(
+            flex: 2,
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        AppointmentBookingScreen(doctor: doctor),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0C4556),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              child: const Text(
+                "Book Now",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -1048,8 +1120,7 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
             _buildPaymentOption(
                 context, 'Net Banking', 'razorpay', Icons.account_balance),
             const Divider(),
-            _buildPaymentOption(
-                context, 'Cash on Delivery', 'cod', Icons.money),
+            _buildPaymentOption(context, 'Direct ', 'cod', Icons.money),
           ],
         ),
         actions: [
@@ -1190,7 +1261,8 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
             });
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Payment recorded but failed to update: ${e.toString()}'),
+                content: Text(
+                    'Payment recorded but failed to update: ${e.toString()}'),
                 backgroundColor: Colors.orange,
               ),
             );
