@@ -51,7 +51,13 @@ class Doctor {
       education: json['education'],
       hospital: json['hospital'],
       languages: List<String>.from(json['languages'] ?? []),
-      availability: Map<String, List<String>>.from(json['availability'] ?? {}),
+      availability: (json['availability'] as Map<String, dynamic>?)?.map(
+            (key, value) => MapEntry(
+              key,
+              List<String>.from(value ?? []),
+            ),
+          ) ??
+          {},
       consultationFee: (json['consultationFee'] ?? 0.0).toDouble(),
       bio: json['bio'],
       isOnline: json['isOnline'] ?? false,
