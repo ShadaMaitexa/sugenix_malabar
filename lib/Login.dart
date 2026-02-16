@@ -401,14 +401,27 @@ class _LoginState extends State<Login> {
       }
 
       // Check for platform restrictions
-      if (!kIsWeb && (userRole == 'admin' || userRole == 'pharmacy')) {
-        await _authService.signOut();
-        if (mounted) {
-          _showSnackBar(userRole == 'admin'
-              ? 'Admin portal is only available on web'
-              : 'Pharmacy portal is only available on web');
+      if (kIsWeb) {
+        // Web: Only Admin and Pharmacy allowed
+        if (userRole != 'admin' && userRole != 'pharmacy') {
+          await _authService.signOut();
+          if (mounted) {
+            _showSnackBar(
+                'Patient and Doctor portals are only available on the mobile app');
+          }
+          return;
         }
-        return;
+      } else {
+        // App (Mobile): Only Patient and Doctor allowed
+        if (userRole == 'admin' || userRole == 'pharmacy') {
+          await _authService.signOut();
+          if (mounted) {
+            _showSnackBar(userRole == 'admin'
+                ? 'Admin portal is only available on web'
+                : 'Pharmacy portal is only available on web');
+          }
+          return;
+        }
       }
 
       if (mounted) {

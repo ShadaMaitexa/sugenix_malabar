@@ -224,19 +224,25 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       }
       return [const UnsupportedRoleScreen(role: 'Pharmacy (Web Only)')];
     } else if (_userRole == 'doctor') {
-      return [
-        const DoctorDashboardScreen(),
-        const ProfileScreen(),
-      ];
+      if (!kIsWeb) {
+        return [
+          const DoctorDashboardScreen(),
+          const ProfileScreen(),
+        ];
+      }
+      return [const UnsupportedRoleScreen(role: 'Doctor (App Only)')];
     } else {
       // Patient/User
-      return [
-        const PatientHomeScreen(),
-        const GlucoseMonitoringScreen(),
-        const MedicalRecordsScreen(),
-        const MedicineOrdersScreen(),
-        const ProfileScreen(),
-      ];
+      if (!kIsWeb) {
+        return [
+          const PatientHomeScreen(),
+          const GlucoseMonitoringScreen(),
+          const MedicalRecordsScreen(),
+          const MedicineOrdersScreen(),
+          const ProfileScreen(),
+        ];
+      }
+      return [const UnsupportedRoleScreen(role: 'Patient (App Only)')];
     }
   }
 
@@ -306,6 +312,15 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         ),
       ];
     } else if (_userRole == 'doctor') {
+      if (kIsWeb) {
+        return [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.block, size: 24),
+            activeIcon: Icon(Icons.block, size: 24),
+            label: l10n.dashboard,
+          ),
+        ];
+      }
       return [
         BottomNavigationBarItem(
           icon: Icon(Icons.dashboard_outlined, size: 24),
@@ -320,6 +335,15 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       ];
     } else {
       // Patient/User
+      if (kIsWeb) {
+        return [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.block, size: 24),
+            activeIcon: Icon(Icons.block, size: 24),
+            label: l10n.home,
+          ),
+        ];
+      }
       return [
         BottomNavigationBarItem(
           icon: Icon(Icons.home_outlined, size: 24),
