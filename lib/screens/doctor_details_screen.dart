@@ -9,7 +9,6 @@ import 'package:sugenix/services/appointment_service.dart';
 import 'package:sugenix/services/auth_service.dart';
 import 'package:sugenix/services/revenue_service.dart';
 import 'package:sugenix/services/razorpay_service.dart';
-import 'package:sugenix/screens/dummy_payment_screen.dart';
 
 class DoctorDetailsScreen extends StatelessWidget {
   final Doctor doctor;
@@ -1206,7 +1205,7 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
         }
       }
     } else {
-      // Online payment - Use actual Razorpay
+      // Online payment - Open Razorpay Checkout
       final consultationFee = widget.doctor.consultationFee;
       final fees = RevenueService.calculateFees(consultationFee);
       final totalFee = fees['totalFee']!;
@@ -1216,7 +1215,6 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
       });
 
       try {
-        // Open Razorpay checkout
         await RazorpayService.openCheckout(
           amount: totalFee,
           name: _patientNameController.text.trim(),
@@ -1224,14 +1222,12 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
           phone: _mobileController.text.trim(),
           description: 'Appointment with ${widget.doctor.name}',
           notes: {
-            'appointment_id': _lastAppointmentId!,
-            'doctor_name': widget.doctor.name,
-            'patient_name': _patientNameController.text.trim(),
+            'appointmentId': _lastAppointmentId,
+            'doctorId': widget.doctor.id,
+            'doctorName': widget.doctor.name,
           },
         );
-
-        // Loading state will be handled by Razorpay callbacks
-        // Success callback is already set up in initState
+        // Payment result will be handled by callbacks in _setupRazorpayCallbacks
       } catch (e) {
         if (mounted) {
           setState(() {
@@ -1239,7 +1235,7 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
           });
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Failed to open payment: ${e.toString()}'),
+              content: Text('Failed to initiate payment: ${e.toString()}'),
               backgroundColor: Colors.red,
             ),
           );

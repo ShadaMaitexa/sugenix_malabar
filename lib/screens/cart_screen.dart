@@ -3,7 +3,6 @@ import 'package:sugenix/services/medicine_cart_service.dart';
 import 'package:sugenix/services/razorpay_service.dart';
 import 'package:sugenix/services/auth_service.dart';
 import 'package:sugenix/services/platform_settings_service.dart';
-import 'package:sugenix/screens/dummy_payment_screen.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -131,7 +130,7 @@ class _CartScreenState extends State<CartScreen> {
   }) async {
     try {
       final address = _addressController.text.trim();
-      
+
       // For COD, only check address if it's empty
       if (paymentMethod == 'COD' && address.isEmpty) {
         if (mounted) {
@@ -157,12 +156,20 @@ class _CartScreenState extends State<CartScreen> {
       // Only validate if guest or if fields are actually empty
       if (paymentMethod == 'COD') {
         // For COD, use defaults if empty and user is logged in
-        final finalName = name.isNotEmpty ? name : (_userProfile?['name'] ?? 'User');
-        final finalEmail = email.isNotEmpty ? email : (_userProfile?['email'] ?? _authService.currentUser?.email ?? 'user@sugenix.com');
-        final finalPhone = phone.isNotEmpty ? phone : (_userProfile?['phone'] ?? '0000000000');
-        
+        final finalName =
+            name.isNotEmpty ? name : (_userProfile?['name'] ?? 'User');
+        final finalEmail = email.isNotEmpty
+            ? email
+            : (_userProfile?['email'] ??
+                _authService.currentUser?.email ??
+                'user@sugenix.com');
+        final finalPhone =
+            phone.isNotEmpty ? phone : (_userProfile?['phone'] ?? '0000000000');
+
         await _cartService.checkout(
-          address: address.isNotEmpty ? address : (_userProfile?['address'] ?? 'Address not specified'),
+          address: address.isNotEmpty
+              ? address
+              : (_userProfile?['address'] ?? 'Address not specified'),
           customerName: finalName,
           customerEmail: finalEmail,
           customerPhone: finalPhone,
@@ -185,7 +192,7 @@ class _CartScreenState extends State<CartScreen> {
         setState(() {
           _showSuccessAnimation = false;
         });
-        
+
         Navigator.pop(context);
         return;
       }
@@ -289,44 +296,51 @@ class _CartScreenState extends State<CartScreen> {
         : (_userProfile?['name'] ?? 'User');
     final email = _isGuest
         ? _emailController.text.trim()
-        : (_userProfile?['email'] ?? _authService.currentUser?.email ?? 'user@sugenix.com');
+        : (_userProfile?['email'] ??
+            _authService.currentUser?.email ??
+            'user@sugenix.com');
     final phone = _isGuest
         ? _phoneController.text.trim()
         : (_userProfile?['phone'] ?? '0000000000');
 
-    // Navigate to dummy payment screen
-    final result = await Navigator.push<Map<String, dynamic>>(
-      context,
-      MaterialPageRoute(
-        builder: (context) => DummyPaymentScreen(
-          amount: amount,
-          name: name,
-          email: email,
-          phone: phone,
-          description: 'Medicine Order Payment - Sugenix',
-          onPaymentComplete: (success, paymentId) {
-            // Handle payment completion
-          },
+    // Validate details before opening checkout
+    if (name.isEmpty || email.isEmpty || phone.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please fill in all details before payment'),
+          backgroundColor: Colors.red,
         ),
-      ),
-    );
-
-    if (result != null && result['success'] == true) {
-      // Payment successful, complete the order
-      await _completeOrder(
-        paymentMethod: 'razorpay',
-        paymentId: result['payment_id'],
       );
-    } else {
-      // Payment cancelled or failed
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Payment cancelled'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-      }
+      return;
+    }
+
+    setState(() {
+      _processingPayment = true;
+    });
+
+    try {
+      await RazorpayService.openCheckout(
+        amount: amount,
+        name: name,
+        email: email,
+        phone: phone,
+        description: 'Medicine Order Payment - Sugenix',
+        notes: {
+          'isGuest': _isGuest,
+          'customerName': name,
+        },
+      );
+      // Success/Error handled by callbacks
+    } catch (e) {
+      setState(() {
+        _processingPayment = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to initiate payment: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
