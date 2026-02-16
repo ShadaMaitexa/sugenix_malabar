@@ -23,7 +23,6 @@ class _SignupState extends State<Signup> {
   bool _obscureConfirmPassword = true;
   bool _agreeToTerms = false;
   bool _isLoading = false;
-  String _selectedGender = 'Male';
   String _selectedDiabetesType = 'Type 1';
   final AuthService _authService = AuthService();
 
@@ -377,11 +376,14 @@ class _SignupState extends State<Signup> {
                               LanguageService.translate(
                                   'doctor_diabetologist', languageCode)),
                           const SizedBox(height: 8),
-                          _buildRoleTile(
-                              'pharmacy',
-                              Icons.local_pharmacy,
-                              LanguageService.translate(
-                                  'pharmacy', languageCode)),
+                          if (!kIsWeb)
+                            const SizedBox.shrink()
+                          else
+                            _buildRoleTile(
+                                'pharmacy',
+                                Icons.local_pharmacy,
+                                LanguageService.translate(
+                                    'pharmacy', languageCode)),
                         ],
                       );
                     },

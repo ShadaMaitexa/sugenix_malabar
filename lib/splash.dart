@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sugenix/Login.dart';
+import 'package:sugenix/services/auth_service.dart';
+import 'package:sugenix/main.dart';
 
 class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
@@ -11,11 +13,48 @@ class SplashScreen extends StatelessWidget {
     final bool isDesktop = width >= 1200;
     final double logoSize = isDesktop ? 250 : (isTablet ? 200 : 160);
     final double titleSize = logoSize * 0.14; // Text is 22% of logo height
-    Future.delayed(Duration(seconds: 3), () {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => Login()),
-      );
+
+    Future.delayed(const Duration(seconds: 3), () async {
+      final authService = AuthService();
+      final user = authService.currentUser;
+
+      if (user != null) {
+        try {
+          final profile = await authService.getUserProfile();
+          final role = profile?['role'] ?? 'user';
+
+          if (context.mounted) {
+            // Only patients and doctors are allowed on the app
+            if (role == 'user' || role == 'doctor') {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => const MainNavigationScreen()),
+              );
+            } else {
+              // Pharmacy and Admin should go to Login (and eventually see unsupported role or be blocked)
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const Login()),
+              );
+            }
+          }
+        } catch (e) {
+          if (context.mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const Login()),
+            );
+          }
+        }
+      } else {
+        if (context.mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const Login()),
+          );
+        }
+      }
     });
 
     return Scaffold(
@@ -54,19 +93,19 @@ class SplashScreen extends StatelessWidget {
                   Transform.translate(
                     offset: Offset(0, -15),
                     child: Image.asset(
-                    'assets/sugenix_logo.png',
-                    height: logoSize,
-                    width: logoSize,
+                      'assets/sugenix_logo.png',
+                      height: logoSize,
+                      width: logoSize,
                     ),
                   ),
                   Transform.translate(
                     offset: Offset(-65, logoSize * 0.12),
                     child: Text(
-                    "SUGENIX",
-                    style: TextStyle(
-                      color: Color(0xFF0C4556),
-                      fontSize: titleSize,
-                      fontWeight: FontWeight.w600,
+                      "SUGENIX",
+                      style: TextStyle(
+                        color: Color(0xFF0C4556),
+                        fontSize: titleSize,
+                        fontWeight: FontWeight.w600,
                         letterSpacing: 3.0,
                         fontFamily: 'Zen Antique',
                       ),

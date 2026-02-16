@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:sugenix/signin.dart';
 import 'package:sugenix/forgetpass.dart';
 import 'package:sugenix/main.dart';
@@ -6,7 +7,6 @@ import 'package:sugenix/services/auth_service.dart';
 import 'package:sugenix/services/admin_service.dart';
 import 'package:sugenix/utils/responsive_layout.dart';
 import 'package:sugenix/l10n/app_localizations.dart';
-import 'package:sugenix/services/language_service.dart';
 import 'package:provider/provider.dart';
 import 'package:sugenix/services/locale_notifier.dart';
 import 'package:sugenix/screens/admin_panel_screen.dart';
@@ -336,6 +336,10 @@ class _LoginState extends State<Login> {
     // Hardcoded Admin Login
     if (_emailController.text == 'admin@sugenix.com' &&
         _passwordController.text == 'admin123') {
+      if (!kIsWeb) {
+        _showSnackBar('Admin portal is only available on web');
+        return;
+      }
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const AdminPanelScreen()),
@@ -394,6 +398,17 @@ class _LoginState extends State<Login> {
           }
           return;
         }
+      }
+
+      // Check for platform restrictions
+      if (!kIsWeb && (userRole == 'admin' || userRole == 'pharmacy')) {
+        await _authService.signOut();
+        if (mounted) {
+          _showSnackBar(userRole == 'admin'
+              ? 'Admin portal is only available on web'
+              : 'Pharmacy portal is only available on web');
+        }
+        return;
       }
 
       if (mounted) {
