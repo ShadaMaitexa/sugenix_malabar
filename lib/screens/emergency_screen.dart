@@ -217,43 +217,6 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
     );
   }
 
-  Widget _buildEmergencyActiveContent() {
-    return Column(
-      children: [
-        const Text(
-          "Emergency Activated!",
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 15),
-        const Text(
-          "Emergency contacts have been notified.\nHelp is on the way!",
-          textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.white70),
-        ),
-        const SizedBox(height: 40),
-        ElevatedButton(
-          onPressed: _cancelEmergency,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.white,
-            foregroundColor: Colors.red,
-            padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(25),
-            ),
-          ),
-          child: const Text(
-            "Cancel Emergency",
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-        ),
-      ],
-    );
-  }
-
   // ================= LOGIC (FIXED) =================
 
   void _startEmergency() {
@@ -282,7 +245,10 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
   Future<void> _sendSOS() async {
     if (_isSending) return;
 
-    setState(() => _isSending = true);
+    setState(() {
+      _isSending = true;
+      _sosStatus = "Getting Location...";
+    });
 
     try {
       final result = await _sosAlertService.triggerSOSAlert();
@@ -290,24 +256,33 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
       if (!mounted) return;
 
       if (result['success'] == true) {
+        setState(() => _sosStatus = "SOS Sent Successfully!");
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
               "🚨 SOS sent to ${result['contactsNotified']} contacts",
             ),
-            backgroundColor: Colors.red,
+            backgroundColor: Colors.green,
           ),
         );
 
         _showStatus(result['notificationDetails']);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(result['error'] ?? "SOS failed"),
-            backgroundColor: Colors.red,
-          ),
-        );
+        setState(() => _sosStatus = "SOS Failed");
+
+        if (result['type'] == 'no_contacts') {
+          _showNoContactsDialog();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['error'] ?? "SOS failed"),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
+    } catch (e) {
+      if (mounted) setState(() => _sosStatus = "Error: ${e.toString()}");
     } finally {
       if (mounted) setState(() => _isSending = false);
     }
@@ -352,6 +327,72 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  void _showNoContactsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("No Emergency Contacts"),
+        content: const Text(
+            "You haven't added any emergency contacts yet. Please add at least one contact with an email address to use the SOS feature."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Later"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/emergency_contacts');
+            },
+            style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0C4556)),
+            child: const Text("Add Contacts",
+                style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _sosStatus = "";
+
+  Widget _buildEmergencyActiveContent() {
+    return Column(
+      children: [
+        Text(
+          _sosStatus.isEmpty ? "Emergency Activated!" : _sosStatus,
+          style: const TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 15),
+        const Text(
+          "Emergency contacts are being notified.\nHelp is on the way!",
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.white70),
+        ),
+        const SizedBox(height: 40),
+        ElevatedButton(
+          onPressed: _cancelEmergency,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.white,
+            foregroundColor: Colors.red,
+            padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(25),
+            ),
+          ),
+          child: const Text(
+            "Cancel Emergency",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
+      ],
     );
   }
 }

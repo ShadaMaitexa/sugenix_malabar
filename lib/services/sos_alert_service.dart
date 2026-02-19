@@ -157,47 +157,29 @@ Sent from: Sugenix - Diabetes Management App
         final hasPermission =
             await PlatformLocationService.hasLocationPermission();
         if (!hasPermission) {
-          final granted =
-              await PlatformLocationService.requestLocationPermission();
-          if (!granted) {
-            // Permission denied, continue without location
-            print(
-                'Location permission denied - SOS will continue without location');
-          }
+          await PlatformLocationService.requestLocationPermission();
         }
 
-        // Get current location (works with GPS even without SIM card)
-        try {
-          position = await PlatformLocationService.getCurrentLocation();
-        } catch (e) {
-          print(
-              'Location request failed: $e - SOS will continue without location');
-          position = null;
-        }
+        // Get current location with short timeout
+        position = await PlatformLocationService.getCurrentLocation();
 
         if (position != null) {
-          final pos = position; // Local variable
+          final pos = position;
           try {
+            // Very short timeout for reverse geocoding to avoid blocking SOS
             address = await PlatformLocationService.getAddressFromCoordinates(
               pos.latitude,
               pos.longitude,
-            ).timeout(const Duration(seconds: 3), onTimeout: () {
-              return 'Latitude: ${pos.latitude.toStringAsFixed(6)}, Longitude: ${pos.longitude.toStringAsFixed(6)}';
+            ).timeout(const Duration(seconds: 2), onTimeout: () {
+              return 'Lat: ${pos.latitude.toStringAsFixed(4)}, Lng: ${pos.longitude.toStringAsFixed(4)}';
             });
           } catch (e) {
-            print('Error getting address: $e');
-            // Continue with coordinates only
             address =
-                'Latitude: ${pos.latitude.toStringAsFixed(6)}, Longitude: ${pos.longitude.toStringAsFixed(6)}';
+                'Lat: ${pos.latitude.toStringAsFixed(4)}, Lng: ${pos.longitude.toStringAsFixed(4)}';
           }
-        } else {
-          print(
-              'Location not available - SOS will continue without location (this is OK, may be due to no SIM/WiFi)');
         }
       } catch (e) {
-        print(
-            'Error getting location: $e - SOS will continue without location');
-        // Continue without location - SOS should still work
+        print('Location error (non-fatal for SOS): $e');
       }
 
       // Get recent glucose readings
@@ -207,7 +189,12 @@ Sent from: Sugenix - Diabetes Management App
       final emergencyContacts = await _getEmergencyContacts();
 
       if (emergencyContacts.isEmpty) {
-        throw Exception('No emergency contacts saved');
+        return {
+          'success': false,
+          'error':
+              'No emergency contacts found. Please add contacts in settings first.',
+          'type': 'no_contacts',
+        };
       }
 
       // Generate SOS message
@@ -234,7 +221,6 @@ Sent from: Sugenix - Diabetes Management App
             : null,
         'glucoseReadings': glucoseReadings,
         'customMessage': customMessage,
-        'sosMessage': sosMessage,
         'status': 'active',
         'emergencyContactsCount': emergencyContacts.length,
         'notificationStatus': {},
@@ -248,45 +234,48 @@ Sent from: Sugenix - Diabetes Management App
       for (final contact in emergencyContacts) {
         final contactName = contact['name']?.toString() ?? 'Emergency Contact';
         final email = contact['email']?.toString() ?? '';
-        final phone =
-            contact['phone']?.toString() ?? ''; // Keep phone for reference
+        final phone = contact['phone']?.toString() ?? '';
 
         if (email.isNotEmpty) {
-          final emailSuccess = await EmailJSService.sendSOSEmail(
-            recipientEmail: email,
-            recipientName: contactName,
-            userName: userName,
-            message: sosMessage,
-          );
+          try {
+            final emailSuccess = await EmailJSService.sendSOSEmail(
+              recipientEmail: email,
+              recipientName: contactName,
+              userName: userName,
+              message: sosMessage,
+            ).timeout(const Duration(seconds: 8), onTimeout: () => false);
 
-          notificationResults.add({
-            'contact': contactName,
-            'email': email,
-            'phone': phone,
-            'status': emailSuccess ? 'sent' : 'failed',
-            'email_status': emailSuccess ? 'sent' : 'failed',
-            'timestamp': DateTime.now().toIso8601String(),
-          });
+            notificationResults.add({
+              'contact': contactName,
+              'email': email,
+              'status': emailSuccess ? 'sent' : 'failed',
+              'timestamp': DateTime.now().toIso8601String(),
+            });
 
-          notificationStatus[email.replaceAll('.', '_')] = {
-            'name': contactName,
-            'status': emailSuccess ? 'sent' : 'failed',
-            'email_status': emailSuccess ? 'sent' : 'failed',
-            'timestamp': FieldValue.serverTimestamp(),
-          };
+            notificationStatus[email.replaceAll('.', '_')] = {
+              'name': contactName,
+              'status': emailSuccess ? 'sent' : 'failed',
+              'timestamp': FieldValue.serverTimestamp(),
+            };
+          } catch (e) {
+            notificationResults.add({
+              'contact': contactName,
+              'email': email,
+              'status': 'failed',
+              'error': e.toString(),
+            });
+          }
         } else {
           notificationResults.add({
             'contact': contactName,
-            'email': '',
             'phone': phone,
             'status': 'skipped',
             'reason': 'No email provided',
-            'timestamp': DateTime.now().toIso8601String(),
           });
         }
       }
 
-      // Update alert with notification status
+      // Update alert with final status
       await alertDoc.update({
         'notificationStatus': notificationStatus,
         'updatedAt': FieldValue.serverTimestamp(),
@@ -296,9 +285,13 @@ Sent from: Sugenix - Diabetes Management App
           notificationResults.where((r) => r['status'] == 'sent').length;
 
       return {
-        'success': true,
+        'success': successCount > 0,
         'contactsNotified': successCount,
+        'totalContacts': emergencyContacts.length,
         'notificationDetails': notificationResults,
+        'error': successCount == 0
+            ? 'Failed to notify any contacts via email. Please check your internet connection or contact settings.'
+            : null,
       };
     } catch (e) {
       return {

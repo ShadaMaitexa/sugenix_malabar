@@ -39,21 +39,25 @@ class PlatformLocationService {
         try {
           return await Geolocator.getCurrentPosition(
             desiredAccuracy: LocationAccuracy.high,
-            timeLimit: const Duration(seconds: 10),
+            timeLimit: const Duration(seconds: 4),
           );
         } catch (e) {
-          // Fallback to lower accuracy if high accuracy fails (e.g., no SIM, no WiFi)
+          // Fallback to lower accuracy if high accuracy fails
           try {
             return await Geolocator.getCurrentPosition(
               desiredAccuracy: LocationAccuracy.medium,
-              timeLimit: const Duration(seconds: 10),
+              timeLimit: const Duration(seconds: 3),
             );
           } catch (e2) {
             // Last resort: use low accuracy
-            return await Geolocator.getCurrentPosition(
-              desiredAccuracy: LocationAccuracy.low,
-              timeLimit: const Duration(seconds: 10),
-            );
+            try {
+              return await Geolocator.getCurrentPosition(
+                desiredAccuracy: LocationAccuracy.low,
+                timeLimit: const Duration(seconds: 2),
+              );
+            } catch (e3) {
+              return null;
+            }
           }
         }
       }
@@ -102,10 +106,10 @@ class PlatformLocationService {
       // For both web and mobile, create a Google Maps link
       // You can enhance this by using a geocoding API service
       final mapsUrl = 'https://maps.google.com/?q=$latitude,$longitude';
-      
+
       // Return formatted location string with coordinates
       return 'Latitude: ${latitude.toStringAsFixed(6)}, Longitude: ${longitude.toStringAsFixed(6)}\n'
-             'Map: $mapsUrl';
+          'Map: $mapsUrl';
     } catch (e) {
       return 'Latitude: ${latitude.toStringAsFixed(6)}, Longitude: ${longitude.toStringAsFixed(6)}';
     }
