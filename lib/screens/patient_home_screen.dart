@@ -12,6 +12,7 @@ import 'package:sugenix/widgets/translated_text.dart';
 import 'package:sugenix/utils/responsive_layout.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:intl/intl.dart';
+import 'dart:async';
 
 class PatientHomeScreen extends StatefulWidget {
   const PatientHomeScreen({super.key});
@@ -28,6 +29,8 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
   Map<String, dynamic>? _userProfile;
   bool _isLoading = true;
   List<Doctor> _allDoctors = [];
+  StreamSubscription? _doctorSubscription;
+  StreamSubscription? _glucoseSubscription;
 
   @override
   void initState() {
@@ -38,11 +41,13 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
   Future<void> _loadData() async {
     try {
       _userProfile = await _authService.getUserProfile();
-      // Load glucose readings stream for potential future use
-      _glucoseService.getGlucoseReadings().listen((readings) {
+      // Load glucose readings stream
+      _glucoseSubscription =
+          _glucoseService.getGlucoseReadings().listen((readings) {
         // Glucose readings updated
       });
-      _doctorService.streamDoctors().listen((doctors) {
+
+      _doctorSubscription = _doctorService.streamDoctors().listen((doctors) {
         if (mounted) {
           setState(() {
             _allDoctors = doctors;
@@ -62,6 +67,13 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
         });
       }
     }
+  }
+
+  @override
+  void dispose() {
+    _doctorSubscription?.cancel();
+    _glucoseSubscription?.cancel();
+    super.dispose();
   }
 
   @override
@@ -276,42 +288,6 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                 const Color(0xFF9C27B0),
                 () {
                   Navigator.pushNamed(context, '/appointments');
-                },
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 15),
-        Row(
-          children: [
-            Expanded(
-              child: _buildActionCard(
-                'Buy Medicines',
-                Icons.shopping_cart,
-                const Color(0xFF2196F3),
-                () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const MedicineCatalogScreen(),
-                    ),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(width: 15),
-            Expanded(
-              child: _buildActionCard(
-                'Medicine Catalog',
-                Icons.menu_book,
-                const Color(0xFF009688),
-                () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const MedicineCatalogScreen(),
-                    ),
-                  );
                 },
               ),
             ),

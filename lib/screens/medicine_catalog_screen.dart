@@ -3,6 +3,7 @@ import 'package:sugenix/services/medicine_database_service.dart';
 import 'package:sugenix/services/medicine_cart_service.dart';
 import 'package:sugenix/utils/responsive_layout.dart';
 import 'package:sugenix/screens/medicine_detail_screen.dart';
+import 'dart:async';
 
 class MedicineCatalogScreen extends StatefulWidget {
   const MedicineCatalogScreen({super.key});
@@ -15,6 +16,7 @@ class _MedicineCatalogScreenState extends State<MedicineCatalogScreen> {
   final MedicineDatabaseService _db = MedicineDatabaseService();
   final MedicineCartService _cart = MedicineCartService();
   final TextEditingController _searchController = TextEditingController();
+  StreamSubscription? _medicineSubscription;
   List<Map<String, dynamic>> _allMedicines = [];
   List<Map<String, dynamic>> _results = [];
   bool _isLoading = true;
@@ -25,53 +27,57 @@ class _MedicineCatalogScreenState extends State<MedicineCatalogScreen> {
     _loadInitial();
   }
 
-  Future<void> _loadInitial() async {
+  void _loadInitial() {
     setState(() => _isLoading = true);
-    try {
-      // Get all medicines using the stream method
-      final stream = _db.getAllMedicines(limit: 100);
-      final list = await stream.first;
-      setState(() {
-        _allMedicines = list;
-        _results = list; // Show all medicines initially
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _allMedicines = [];
-        _results = [];
-        _isLoading = false;
-      });
-    }
+    _medicineSubscription = _db.getAllMedicines(limit: 100).listen(
+      (list) {
+        if (mounted) {
+          setState(() {
+            _allMedicines = list;
+            // Only update results if we are not currently searching
+            if (_searchController.text.trim().isEmpty) {
+              _results = list;
+            }
+            _isLoading = false;
+          });
+        }
+      },
+      onError: (e) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      },
+    );
   }
 
   Future<void> _runSearch(String query) async {
-    if (query.trim().isEmpty) {
+    final trimmedQuery = query.trim();
+    if (trimmedQuery.isEmpty) {
       if (mounted) {
         setState(() {
           _results = _allMedicines;
+          _isLoading = false;
         });
       }
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
-
+    // We don't set _isLoading = true here to avoid the full-screen flicker
+    // as the user types. Instead, we just update the results when they arrive.
     try {
-      final searchResults = await _db.searchMedicines(query.trim());
+      final searchResults = await _db.searchMedicines(trimmedQuery);
       if (mounted) {
-        setState(() {
-          _results = searchResults;
-          _isLoading = false;
-        });
+        // Only update if the search controller still matches the query we ran
+        if (_searchController.text.trim() == trimmedQuery) {
+          setState(() {
+            _results = searchResults;
+          });
+        }
       }
     } catch (e) {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Search error: ${e.toString()}')),
         );
@@ -82,6 +88,7 @@ class _MedicineCatalogScreenState extends State<MedicineCatalogScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    _medicineSubscription?.cancel();
     super.dispose();
   }
 

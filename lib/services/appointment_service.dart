@@ -18,92 +18,87 @@ class AppointmentService {
     String? notes,
     double? fee,
   }) async {
-    if (_auth.currentUser == null) throw Exception('No user logged in');
+    final user = _auth.currentUser;
+    if (user == null) throw Exception('No user logged in');
+    final uid = user.uid;
 
-    // Optimized: Check for conflicts only on the specific day
-    final dayStart = DateTime(dateTime.year, dateTime.month, dateTime.day);
-    final dayEnd = dayStart.add(const Duration(days: 1));
+    // Use a deterministic ID to prevent double booking in the same slot
+    // Format: doctorId_timestampMillis (timestamp normalized to minute boundary)
+    final appointmentId = "${doctorId}_${dateTime.millisecondsSinceEpoch}";
+    final appointmentRef =
+        _firestore.collection('appointments').doc(appointmentId);
 
-    print('Checking conflicts for doctor: $doctorId on $dateTime');
+    return await _firestore.runTransaction((transaction) async {
+      final snapshot = await transaction.get(appointmentRef);
 
-    final appointmentsSnapshot = await _firestore
-        .collection('appointments')
-        .where('doctorId', isEqualTo: doctorId)
-        .where('dateTime', isGreaterThanOrEqualTo: Timestamp.fromDate(dayStart))
-        .where('dateTime', isLessThan: Timestamp.fromDate(dayEnd))
-        .get();
+      if (snapshot.exists) {
+        final existingData = snapshot.data()!;
+        final existingStatus =
+            (existingData['status'] as String?)?.toLowerCase();
 
-    print(
-        'Found ${appointmentsSnapshot.docs.length} existing appointments for the day');
+        // If the appointment is active (not cancelled, rejected, or completed)
+        // We allow re-booking if the previous one was cancelled or rejected.
+        if (existingStatus != 'cancelled' &&
+            existingStatus != 'rejected' &&
+            existingStatus != 'completed') {
+          final timeStr =
+              "${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}";
 
-    // Check for conflicts
-    for (var doc in appointmentsSnapshot.docs) {
-      final existingData = doc.data();
-      final existingStatus = (existingData['status'] as String?)?.toLowerCase();
+          // If THIS patient already booked this exact slot, treat it as a success/resume
+          if (existingData['patientId'] == uid) {
+            print(
+                'RE-USE DETECTED: Returning existing appointment $appointmentId');
+            return appointmentId;
+          }
 
-      // Skip cancelled or rejected appointments
-      if (existingStatus == 'cancelled' ||
-          existingStatus == 'rejected' ||
-          existingStatus == 'completed') {
-        continue;
-      }
-
-      final existingDateTime =
-          (existingData['dateTime'] as Timestamp?)?.toDate();
-      if (existingDateTime == null) continue;
-
-      // Check if it's the exact same time slot (hour and minute match)
-      if (existingDateTime.hour == dateTime.hour &&
-          existingDateTime.minute == dateTime.minute) {
-        final timeStr =
-            "${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}";
-
-        // If the SAME patient already booked this exact slot, treat it as a success/duplicate
-        if (existingData['patientId'] == _auth.currentUser!.uid) {
-          print('RE-USE DETECTED: Returning existing appointment ${doc.id}');
-          return doc.id;
+          print(
+              'CONFLICT DETECTED: Slot $timeStr already booked by another user');
+          throw Exception(
+              'The $timeStr slot is already booked. Please select a different time.');
         }
-
-        print('CONFLICT DETECTED: Existing appointment ${doc.id} at $timeStr');
-        throw Exception(
-            'The $timeStr slot is already booked. Please select a different time.');
       }
-    }
 
-    // Calculate fees
-    double consultationFee = fee ?? 0.0;
-    final fees = RevenueService.calculateFees(consultationFee);
-    final totalFee = fees['totalFee']!;
-    final platformFee = fees['platformFee']!;
-    final doctorFee = fees['doctorFee']!;
+      // Calculate fees
+      double consultationFee = fee ?? 0.0;
+      final fees = RevenueService.calculateFees(consultationFee);
+      final totalFee = fees['totalFee']!;
+      final platformFee = fees['platformFee']!;
+      final doctorFee = fees['doctorFee']!;
 
-    // Create appointment
-    final appointmentRef = await _firestore.collection('appointments').add({
-      'doctorId': doctorId,
-      'doctorName': doctorName,
-      'patientId': _auth.currentUser!.uid,
-      'dateTime': Timestamp.fromDate(dateTime),
-      'status': 'scheduled',
-      'patientName': patientName,
-      'patientMobile': patientMobile,
-      'patientType': patientType,
-      'notes': notes,
-      'fee': consultationFee,
-      'totalFee': totalFee,
-      'platformFee': platformFee,
-      'doctorFee': doctorFee,
-      'paymentStatus': 'pending',
-      'createdAt': FieldValue.serverTimestamp(),
-      'updatedAt': FieldValue.serverTimestamp(),
+      final appointmentData = {
+        'doctorId': doctorId,
+        'doctorName': doctorName,
+        'patientId': uid,
+        'dateTime': Timestamp.fromDate(dateTime),
+        'status': 'scheduled',
+        'patientName': patientName,
+        'patientMobile': patientMobile,
+        'patientType': patientType,
+        'notes': notes,
+        'fee': consultationFee,
+        'totalFee': totalFee,
+        'platformFee': platformFee,
+        'doctorFee': doctorFee,
+        'paymentStatus': 'pending',
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+      // Set the appointment with our unique slot ID
+      transaction.set(appointmentRef, appointmentData);
+
+      // Update doctor's booking count
+      final doctorRef = _firestore.collection('doctors').doc(doctorId);
+      transaction.set(
+          doctorRef,
+          {
+            'totalBookings': FieldValue.increment(1),
+            'updatedAt': FieldValue.serverTimestamp(),
+          },
+          SetOptions(merge: true));
+
+      return appointmentId;
     });
-
-    // Update doctor's booking count - using set with merge to be more robust
-    await _firestore.collection('doctors').doc(doctorId).set({
-      'totalBookings': FieldValue.increment(1),
-      'updatedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
-
-    return appointmentRef.id;
   }
 
   // Process payment for appointment
@@ -295,18 +290,24 @@ class AppointmentService {
   Future<List<String>> getAvailableTimeSlots(
       String doctorId, DateTime date) async {
     try {
-      // Get all appointments for this doctor (filtered by doctorId)
+      // Optimized: Get only appointments for this doctor on the specific day
+      final dayStart = DateTime(date.year, date.month, date.day);
+      final dayEnd = dayStart.add(const Duration(days: 1));
+
       final appointments = await _firestore
           .collection('appointments')
           .where('doctorId', isEqualTo: doctorId)
+          .where('dateTime',
+              isGreaterThanOrEqualTo: Timestamp.fromDate(dayStart))
+          .where('dateTime', isLessThan: Timestamp.fromDate(dayEnd))
           .get();
 
       final bookedSlots = appointments.docs
           .map((doc) {
             final data = doc.data();
+            final status = (data['status'] as String?)?.toLowerCase();
 
-            // Check status - dont count cancelled as booked
-            final status = data['status'] as String?;
+            // Only count active appointments as booked
             if (status == 'cancelled' ||
                 status == 'rejected' ||
                 status == 'completed') return null;
@@ -314,13 +315,7 @@ class AppointmentService {
             final timestamp = data['dateTime'] as Timestamp?;
             if (timestamp != null) {
               final dt = timestamp.toDate();
-
-              // Only consider appointments on the SAME DAY
-              if (dt.year == date.year &&
-                  dt.month == date.month &&
-                  dt.day == date.day) {
-                return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-              }
+              return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
             }
             return null;
           })

@@ -394,7 +394,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       body: SafeArea(
         top: false,
         bottom: false,
-        child: _screens[_selectedIndex],
+        child: IndexedStack(
+          index: _selectedIndex,
+          children: _screens,
+        ),
       ),
       bottomNavigationBar: Builder(
         builder: (context) {
