@@ -42,79 +42,81 @@ class _MedicineOrdersScreenState extends State<MedicineOrdersScreen> {
         final price = (m['price'] as num?)?.toDouble() ?? 0.0;
         final manufacturer = (m['manufacturer'] as String?) ?? '';
         return Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.06),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
-              )
-            ],
-          ),
-          child: ListTile(
-            leading: const Icon(Icons.medication, color: Color(0xFF0C4556)),
-            title: Text(name,
-                style: const TextStyle(
-                    fontWeight: FontWeight.w600, color: Color(0xFF0C4556))),
-            subtitle: Text(
-              desc.isNotEmpty ? desc : manufacturer,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.grey),
-            ),
-            trailing: ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 56),
-              child: FittedBox(
-                alignment: Alignment.center,
-                fit: BoxFit.scaleDown,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                Text('₹${price.toStringAsFixed(2)}',
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w600, color: Color(0xFF0C4556))),
-                const SizedBox(height: 6),
-                SizedBox(
-                  height: 32,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0C4556),
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8)),
-                    ),
-                    onPressed: () async {
-                      try {
-                        await _cart.addToCart(
-                          medicineId: (m['id'] as String?) ?? name,
-                          name: name,
-                          price: price,
-                          manufacturer: manufacturer,
-                        );
-                        if (!mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Added to cart')),
-                        );
-                      } catch (e) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                              content:
-                                  Text('Failed to add: ${e.toString()}')),
-                        );
-                      }
-                    },
-                    child: const Text('Add',
-                        style: TextStyle(color: Colors.white)),
-                  ),
-                ),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.06),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                )
               ],
             ),
-          ),),
-        ));
+            child: ListTile(
+              leading: const Icon(Icons.medication, color: Color(0xFF0C4556)),
+              title: Text(name,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w600, color: Color(0xFF0C4556))),
+              subtitle: Text(
+                desc.isNotEmpty ? desc : manufacturer,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: Colors.grey),
+              ),
+              trailing: ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 56),
+                child: FittedBox(
+                  alignment: Alignment.center,
+                  fit: BoxFit.scaleDown,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text('₹${price.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF0C4556))),
+                      const SizedBox(height: 6),
+                      SizedBox(
+                        height: 32,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF0C4556),
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8)),
+                          ),
+                          onPressed: () async {
+                            try {
+                              await _cart.addToCart(
+                                medicineId: (m['id'] as String?) ?? name,
+                                name: name,
+                                price: price,
+                                manufacturer: manufacturer,
+                              );
+                              if (!mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Added to cart')),
+                              );
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                    content:
+                                        Text('Failed to add: ${e.toString()}')),
+                              );
+                            }
+                          },
+                          child: const Text('Add',
+                              style: TextStyle(color: Colors.white)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ));
       },
     );
   }
@@ -162,7 +164,9 @@ class _MedicineOrdersScreenState extends State<MedicineOrdersScreen> {
           child: Column(
             children: [
               _buildSearchBar(),
-              const SizedBox(height: 30),
+              const SizedBox(height: 16),
+              _buildQuickBuyRow(),
+              const SizedBox(height: 20),
               if (_searching)
                 const Center(child: CircularProgressIndicator())
               else if (_results.isNotEmpty)
@@ -195,9 +199,98 @@ class _MedicineOrdersScreenState extends State<MedicineOrdersScreen> {
             onPressed: () => _runSearch(_searchController.text),
           ),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
         ),
       ),
+    );
+  }
+
+  /// Prominent quick-access row for Buy Medicines & Medicine Catalog
+  Widget _buildQuickBuyRow() {
+    return Row(
+      children: [
+        Expanded(
+          child: GestureDetector(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MedicineCatalogScreen()),
+            ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF0C4556), Color(0xFF1A6B7A)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF0C4556).withOpacity(0.25),
+                    blurRadius: 10,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.shopping_cart, color: Colors.white, size: 22),
+                  SizedBox(width: 8),
+                  Text(
+                    'Buy Medicines',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: GestureDetector(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MedicineCatalogScreen()),
+            ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFF0C4556), width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.06),
+                    blurRadius: 10,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.menu_book, color: Color(0xFF0C4556), size: 22),
+                  SizedBox(width: 8),
+                  Text(
+                    'Medicine Catalog',
+                    style: TextStyle(
+                      color: Color(0xFF0C4556),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -209,21 +302,26 @@ class _MedicineOrdersScreenState extends State<MedicineOrdersScreen> {
         "color": Colors.purple,
       },
       {
-        "title": "Order medicine online",
-        "icon": Icons.medication,
+        "title": "Buy Medicines",
+        "icon": Icons.shopping_cart,
         "color": Colors.blue,
       },
       {
-        "title": "Prescription medical records",
+        "title": "Medicine Catalog",
+        "icon": Icons.menu_book,
+        "color": Colors.teal,
+      },
+      {
+        "title": "Prescription Upload",
         "icon": Icons.description,
         "color": Colors.green,
       },
       {
-        "title": "Order history",
+        "title": "Order History",
         "icon": Icons.history,
         "color": Colors.orange,
       },
-      {"title": "Help & Support", "icon": Icons.help, "color": Colors.teal},
+      {"title": "Help & Support", "icon": Icons.help, "color": Colors.pink},
     ];
 
     return GridView.builder(
@@ -296,20 +394,33 @@ class _MedicineOrdersScreenState extends State<MedicineOrdersScreen> {
       case "Scan Medicine":
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const MedicineScannerScreen()),
+          MaterialPageRoute(
+              builder: (context) => const MedicineScannerScreen()),
         );
         break;
+      case "Buy Medicines":
+      case "Medicine Catalog":
       case "Order medicine online":
-        Navigator.push(context, MaterialPageRoute(builder: (_) => const MedicineCatalogScreen()));
+        Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const MedicineCatalogScreen()));
         break;
+      case "Prescription Upload":
       case "Prescription medical records":
-        Navigator.push(context, MaterialPageRoute(builder: (_) => const PrescriptionUploadScreen()));
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (_) => const PrescriptionUploadScreen()));
         break;
-      case "Order status":
-        Navigator.push(context, MaterialPageRoute(builder: (_) => OrdersListScreen()));
+      case "Order Status":
+        Navigator.push(
+            context, MaterialPageRoute(builder: (_) => OrdersListScreen()));
         break;
+      case "Order History":
       case "Order history":
-        Navigator.push(context, MaterialPageRoute(builder: (_) => const PatientOrderHistoryScreen()));
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (_) => const PatientOrderHistoryScreen()));
         break;
       case "Help & Support":
         _showHelpSupportDialog(context);
@@ -320,7 +431,7 @@ class _MedicineOrdersScreenState extends State<MedicineOrdersScreen> {
         );
     }
   }
-  
+
   void _showHelpSupportDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -401,7 +512,7 @@ class _MedicineOrdersScreenState extends State<MedicineOrdersScreen> {
       ),
     );
   }
-  
+
   Widget _buildSupportOption(
     BuildContext context,
     IconData icon,

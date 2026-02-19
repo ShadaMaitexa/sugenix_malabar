@@ -1352,10 +1352,18 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
         setState(() {
           _isLoading = false;
         });
+        // Extract the actual error message, stripping nested "Exception:" prefixes
+        String errorMsg = e.toString();
+        errorMsg = errorMsg.replaceAll(RegExp(r'^Exception:\s*'), '');
+        errorMsg = errorMsg.replaceAll(
+            RegExp(r'^Failed to book appointment:\s*(Exception:\s*)?'), '');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to book appointment: ${e.toString()}'),
+            content: Text(errorMsg.isNotEmpty
+                ? errorMsg
+                : 'Failed to book appointment. Please try again.'),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
           ),
         );
       }

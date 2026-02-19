@@ -18,80 +18,77 @@ class AppointmentService {
     String? notes,
     double? fee,
   }) async {
-    try {
-      if (_auth.currentUser == null) throw Exception('No user logged in');
+    if (_auth.currentUser == null) throw Exception('No user logged in');
 
-      // Check if slot is available for this specific doctor and dateTime
-      // Get all active appointments for this doctor (client-side filter for now to avoid Index issues)
-      final allAppointments = await _firestore
-          .collection('appointments')
-          .where('doctorId', isEqualTo: doctorId)
-          .get();
+    // Check if slot is available for this specific doctor and dateTime
+    // Get all active appointments for this doctor (client-side filter for now to avoid Index issues)
+    final allAppointments = await _firestore
+        .collection('appointments')
+        .where('doctorId', isEqualTo: doctorId)
+        .get();
 
-      // Check for conflicts
-      for (var doc in allAppointments.docs) {
-        final existingData = doc.data();
-        final existingStatus = existingData['status'] as String?;
+    // Check for conflicts
+    for (var doc in allAppointments.docs) {
+      final existingData = doc.data();
+      final existingStatus = existingData['status'] as String?;
 
-        // Skip cancelled or rejected appointments
-        if (existingStatus == 'cancelled' ||
-            existingStatus == 'rejected' ||
-            existingStatus == 'completed') {
-          continue;
-        }
-
-        final existingDateTime =
-            (existingData['dateTime'] as Timestamp?)?.toDate();
-        if (existingDateTime == null) continue;
-
-        // precise check: same year, month, day
-        if (existingDateTime.year == dateTime.year &&
-            existingDateTime.month == dateTime.month &&
-            existingDateTime.day == dateTime.day) {
-          // Check if it's the exact same time slot (hour and minute match)
-          if (existingDateTime.hour == dateTime.hour &&
-              existingDateTime.minute == dateTime.minute) {
-            throw Exception('This time slot is already booked');
-          }
-        }
+      // Skip cancelled or rejected appointments
+      if (existingStatus == 'cancelled' ||
+          existingStatus == 'rejected' ||
+          existingStatus == 'completed') {
+        continue;
       }
 
-      // Calculate fees
-      double consultationFee = fee ?? 0.0;
-      final fees = RevenueService.calculateFees(consultationFee);
-      final totalFee = fees['totalFee']!;
-      final platformFee = fees['platformFee']!;
-      final doctorFee = fees['doctorFee']!;
+      final existingDateTime =
+          (existingData['dateTime'] as Timestamp?)?.toDate();
+      if (existingDateTime == null) continue;
 
-      // Create appointment
-      final appointmentRef = await _firestore.collection('appointments').add({
-        'doctorId': doctorId,
-        'doctorName': doctorName,
-        'patientId': _auth.currentUser!.uid,
-        'dateTime': Timestamp.fromDate(dateTime),
-        'status': 'scheduled',
-        'patientName': patientName,
-        'patientMobile': patientMobile,
-        'patientType': patientType,
-        'notes': notes,
-        'fee': consultationFee,
-        'totalFee': totalFee,
-        'platformFee': platformFee,
-        'doctorFee': doctorFee,
-        'paymentStatus': 'pending',
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-
-      // Update doctor's booking count
-      await _firestore.collection('doctors').doc(doctorId).update({
-        'totalBookings': FieldValue.increment(1),
-      });
-
-      return appointmentRef.id;
-    } catch (e) {
-      throw Exception('Failed to book appointment: ${e.toString()}');
+      // precise check: same year, month, day
+      if (existingDateTime.year == dateTime.year &&
+          existingDateTime.month == dateTime.month &&
+          existingDateTime.day == dateTime.day) {
+        // Check if it's the exact same time slot (hour and minute match)
+        if (existingDateTime.hour == dateTime.hour &&
+            existingDateTime.minute == dateTime.minute) {
+          throw Exception(
+              'This time slot is already booked by another patient. Please select a different time.');
+        }
+      }
     }
+
+    // Calculate fees
+    double consultationFee = fee ?? 0.0;
+    final fees = RevenueService.calculateFees(consultationFee);
+    final totalFee = fees['totalFee']!;
+    final platformFee = fees['platformFee']!;
+    final doctorFee = fees['doctorFee']!;
+
+    // Create appointment
+    final appointmentRef = await _firestore.collection('appointments').add({
+      'doctorId': doctorId,
+      'doctorName': doctorName,
+      'patientId': _auth.currentUser!.uid,
+      'dateTime': Timestamp.fromDate(dateTime),
+      'status': 'scheduled',
+      'patientName': patientName,
+      'patientMobile': patientMobile,
+      'patientType': patientType,
+      'notes': notes,
+      'fee': consultationFee,
+      'totalFee': totalFee,
+      'platformFee': platformFee,
+      'doctorFee': doctorFee,
+      'paymentStatus': 'pending',
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+
+    // Update doctor's booking count
+    await _firestore.collection('doctors').doc(doctorId).update({
+      'totalBookings': FieldValue.increment(1),
+    });
+
+    return appointmentRef.id;
   }
 
   // Process payment for appointment
