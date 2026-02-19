@@ -20,17 +20,26 @@ class AppointmentService {
   }) async {
     if (_auth.currentUser == null) throw Exception('No user logged in');
 
-    // Check if slot is available for this specific doctor and dateTime
-    // Get all active appointments for this doctor (client-side filter for now to avoid Index issues)
-    final allAppointments = await _firestore
+    // Optimized: Check for conflicts only on the specific day
+    final dayStart = DateTime(dateTime.year, dateTime.month, dateTime.day);
+    final dayEnd = dayStart.add(const Duration(days: 1));
+
+    print('Checking conflicts for doctor: $doctorId on $dateTime');
+
+    final appointmentsSnapshot = await _firestore
         .collection('appointments')
         .where('doctorId', isEqualTo: doctorId)
+        .where('dateTime', isGreaterThanOrEqualTo: Timestamp.fromDate(dayStart))
+        .where('dateTime', isLessThan: Timestamp.fromDate(dayEnd))
         .get();
 
+    print(
+        'Found ${appointmentsSnapshot.docs.length} existing appointments for the day');
+
     // Check for conflicts
-    for (var doc in allAppointments.docs) {
+    for (var doc in appointmentsSnapshot.docs) {
       final existingData = doc.data();
-      final existingStatus = existingData['status'] as String?;
+      final existingStatus = (existingData['status'] as String?)?.toLowerCase();
 
       // Skip cancelled or rejected appointments
       if (existingStatus == 'cancelled' ||
@@ -43,16 +52,14 @@ class AppointmentService {
           (existingData['dateTime'] as Timestamp?)?.toDate();
       if (existingDateTime == null) continue;
 
-      // precise check: same year, month, day
-      if (existingDateTime.year == dateTime.year &&
-          existingDateTime.month == dateTime.month &&
-          existingDateTime.day == dateTime.day) {
-        // Check if it's the exact same time slot (hour and minute match)
-        if (existingDateTime.hour == dateTime.hour &&
-            existingDateTime.minute == dateTime.minute) {
-          throw Exception(
-              'This time slot is already booked by another patient. Please select a different time.');
-        }
+      // Check if it's the exact same time slot (hour and minute match)
+      if (existingDateTime.hour == dateTime.hour &&
+          existingDateTime.minute == dateTime.minute) {
+        final timeStr =
+            "${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}";
+        print('CONFLICT DETECTED: Existing appointment ${doc.id} at $timeStr');
+        throw Exception(
+            'The $timeStr slot is already booked. Please select a different time.');
       }
     }
 

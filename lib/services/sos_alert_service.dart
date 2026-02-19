@@ -119,8 +119,10 @@ Sent from: Sugenix - Diabetes Management App
             return <String, dynamic>{};
           })
           .where((contact) =>
-              contact['phone'] != null &&
-              contact['phone'].toString().isNotEmpty)
+              (contact['phone'] != null &&
+                  contact['phone'].toString().isNotEmpty) ||
+              (contact['email'] != null &&
+                  contact['email'].toString().isNotEmpty))
           .toList();
     } catch (e) {
       print('Error fetching emergency contacts: $e');

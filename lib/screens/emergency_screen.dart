@@ -339,7 +339,7 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: Text(
                 "${d['status'] == 'sent' ? '✅' : '❌'} "
-                "${d['contact']} - ${d['phone']}",
+                "${d['contact']} - ${((d['email'] ?? '').toString().isNotEmpty) ? d['email'] : d['phone']}",
                 style: const TextStyle(fontSize: 12),
               ),
             );

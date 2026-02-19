@@ -228,7 +228,20 @@ We appreciate your interest in joining the Sugenix platform.'''
         print('✅ SOS email sent successfully to $recipientEmail');
         return true;
       } else {
-        print('❌ EmailJS SOS Error: ${response.statusCode} - ${response.body}');
+        final errorBody = response.body;
+        print('❌ EmailJS SOS Error: ${response.statusCode} - $errorBody');
+        print('Payload sent to EmailJS: ${jsonEncode({
+              'service_id': _serviceId,
+              'template_id': _templateId,
+              'user_id': _publicKey,
+              'template_params': {
+                'to_email': recipientEmail,
+                'to_name': recipientName,
+                'subject': subject,
+                'title': title,
+                'message': message,
+              }
+            })}');
         return false;
       }
     } catch (e) {
