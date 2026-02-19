@@ -57,6 +57,13 @@ class AppointmentService {
           existingDateTime.minute == dateTime.minute) {
         final timeStr =
             "${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}";
+
+        // If the SAME patient already booked this exact slot, treat it as a success/duplicate
+        if (existingData['patientId'] == _auth.currentUser!.uid) {
+          print('RE-USE DETECTED: Returning existing appointment ${doc.id}');
+          return doc.id;
+        }
+
         print('CONFLICT DETECTED: Existing appointment ${doc.id} at $timeStr');
         throw Exception(
             'The $timeStr slot is already booked. Please select a different time.');
@@ -90,10 +97,11 @@ class AppointmentService {
       'updatedAt': FieldValue.serverTimestamp(),
     });
 
-    // Update doctor's booking count
-    await _firestore.collection('doctors').doc(doctorId).update({
+    // Update doctor's booking count - using set with merge to be more robust
+    await _firestore.collection('doctors').doc(doctorId).set({
       'totalBookings': FieldValue.increment(1),
-    });
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
 
     return appointmentRef.id;
   }
