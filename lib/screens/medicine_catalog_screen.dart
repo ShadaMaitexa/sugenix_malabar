@@ -45,34 +45,38 @@ class _MedicineCatalogScreenState extends State<MedicineCatalogScreen> {
     }
   }
 
-  void _filterMedicines(String query) {
-    // Filter medicines based on search query - like e-commerce
+  Future<void> _runSearch(String query) async {
     if (query.trim().isEmpty) {
-      // If search is empty, show all medicines
-      setState(() {
-        _results = _allMedicines;
-      });
+      if (mounted) {
+        setState(() {
+          _results = _allMedicines;
+        });
+      }
       return;
     }
 
-    // Filter from loaded medicines only
-    final queryLower = query.toLowerCase().trim();
     setState(() {
-      _results = _allMedicines.where((medicine) {
-        final name = (medicine['name'] as String? ?? '').toLowerCase();
-        final manufacturer = (medicine['manufacturer'] as String? ?? '').toLowerCase();
-        final description = (medicine['description'] as String? ?? '').toLowerCase();
-        
-        return name.contains(queryLower) || 
-               manufacturer.contains(queryLower) || 
-               description.contains(queryLower);
-      }).toList();
+      _isLoading = true;
     });
-  }
 
-  Future<void> _runSearch(String q) async {
-    // Simple search - just filter from loaded medicines
-    _filterMedicines(q);
+    try {
+      final searchResults = await _db.searchMedicines(query.trim());
+      if (mounted) {
+        setState(() {
+          _results = searchResults;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Search error: ${e.toString()}')),
+        );
+      }
+    }
   }
 
   @override
@@ -112,16 +116,19 @@ class _MedicineCatalogScreenState extends State<MedicineCatalogScreen> {
           ),
           Expanded(
             child: _isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : _results.isEmpty
-                        ? const Center(
-                            child: Text('No medicines found', style: TextStyle(color: Colors.grey)),
-                          )
-                        : GridView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                ? const Center(child: CircularProgressIndicator())
+                : _results.isEmpty
+                    ? const Center(
+                        child: Text('No medicines found',
+                            style: TextStyle(color: Colors.grey)),
+                      )
+                    : GridView.builder(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: crossAxisCount,
-                          childAspectRatio: isDesktop ? 0.72 : (isTablet ? 0.74 : 0.70),
+                          childAspectRatio:
+                              isDesktop ? 0.72 : (isTablet ? 0.74 : 0.70),
                           crossAxisSpacing: 12,
                           mainAxisSpacing: 12,
                         ),
@@ -133,18 +140,23 @@ class _MedicineCatalogScreenState extends State<MedicineCatalogScreen> {
                             onAddToCart: () async {
                               try {
                                 await _cart.addToCart(
-                                  medicineId: (m['id'] as String?) ?? (m['name'] as String? ?? 'item'),
+                                  medicineId: (m['id'] as String?) ??
+                                      (m['name'] as String? ?? 'item'),
                                   name: (m['name'] as String?) ?? 'Medicine',
-                                  price: (m['price'] as num?)?.toDouble() ?? 0.0,
+                                  price:
+                                      (m['price'] as num?)?.toDouble() ?? 0.0,
                                   manufacturer: m['manufacturer'] as String?,
                                 );
                                 if (!mounted) return;
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Added to cart')),
+                                  const SnackBar(
+                                      content: Text('Added to cart')),
                                 );
                               } catch (e) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('Add failed: ${e.toString()}')),
+                                  SnackBar(
+                                      content:
+                                          Text('Add failed: ${e.toString()}')),
                                 );
                               }
                             },
@@ -152,7 +164,8 @@ class _MedicineCatalogScreenState extends State<MedicineCatalogScreen> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => MedicineDetailScreen(medicine: m),
+                                  builder: (_) =>
+                                      MedicineDetailScreen(medicine: m),
                                 ),
                               );
                             },
@@ -171,10 +184,10 @@ class _MedicineCatalogScreenState extends State<MedicineCatalogScreen> {
         color: Colors.grey[100],
         borderRadius: BorderRadius.circular(12),
       ),
-        child: TextField(
-          controller: _searchController,
-          onChanged: _filterMedicines, // Filter as user types
-          onSubmitted: _runSearch,
+      child: TextField(
+        controller: _searchController,
+        onChanged: _runSearch, // Search as user types
+        onSubmitted: _runSearch,
         decoration: InputDecoration(
           hintText: "Search medicines, brands...",
           prefixIcon: const Icon(Icons.search, color: Colors.grey),
@@ -183,7 +196,8 @@ class _MedicineCatalogScreenState extends State<MedicineCatalogScreen> {
             onPressed: () => _runSearch(_searchController.text),
           ),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
         ),
       ),
     );
@@ -272,7 +286,8 @@ class _MedicineCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Center(
-                  child: Icon(Icons.medication, color: Color(0xFF0C4556), size: 32),
+                  child: Icon(Icons.medication,
+                      color: Color(0xFF0C4556), size: 32),
                 ),
               ),
               const SizedBox(height: 8),
@@ -338,14 +353,17 @@ class _MedicineCard extends StatelessWidget {
                         backgroundColor: _isAvailable(medicine)
                             ? const Color(0xFF0C4556)
                             : Colors.grey,
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 0),
                         minimumSize: const Size(55, 32),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
                       ),
                       onPressed: _isAvailable(medicine) ? onAddToCart : null,
                       child: Text(
                         _isAvailable(medicine) ? 'Add' : 'Out',
-                        style: const TextStyle(color: Colors.white, fontSize: 11),
+                        style:
+                            const TextStyle(color: Colors.white, fontSize: 11),
                       ),
                     ),
                   ),
@@ -358,5 +376,3 @@ class _MedicineCard extends StatelessWidget {
     );
   }
 }
-
-

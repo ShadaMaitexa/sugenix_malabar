@@ -25,6 +25,7 @@ class _PharmacyAddMedicineFormState extends State<PharmacyAddMedicineForm> {
   final _sideEffectsController = TextEditingController();
   final _precautionsController = TextEditingController();
   final _stockController = TextEditingController();
+  final _barcodeController = TextEditingController();
 
   bool _requiresPrescription = false;
   bool _isLoading = false;
@@ -42,6 +43,7 @@ class _PharmacyAddMedicineFormState extends State<PharmacyAddMedicineForm> {
     _sideEffectsController.dispose();
     _precautionsController.dispose();
     _stockController.dispose();
+    _barcodeController.dispose();
     super.dispose();
   }
 
@@ -89,6 +91,7 @@ class _PharmacyAddMedicineFormState extends State<PharmacyAddMedicineForm> {
         'precautions': precautions,
         'requiresPrescription': _requiresPrescription,
         'pharmacyId': userId,
+        'barcode': _barcodeController.text.trim(),
         'available': true,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
@@ -205,6 +208,9 @@ class _PharmacyAddMedicineFormState extends State<PharmacyAddMedicineForm> {
             _buildTextField(_precautionsController,
                 'Precautions (comma separated)', Icons.health_and_safety,
                 maxLines: 2),
+            const SizedBox(height: 12),
+            _buildTextField(
+                _barcodeController, 'Barcode', Icons.qr_code_scanner),
             const SizedBox(height: 12),
             SwitchListTile(
               title: const Text('Requires Prescription'),

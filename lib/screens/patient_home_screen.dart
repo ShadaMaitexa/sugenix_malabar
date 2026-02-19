@@ -281,6 +281,42 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
             ),
           ],
         ),
+        const SizedBox(height: 15),
+        Row(
+          children: [
+            Expanded(
+              child: _buildActionCard(
+                'Buy Medicines',
+                Icons.shopping_cart,
+                const Color(0xFF2196F3),
+                () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const MedicineCatalogScreen(),
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(width: 15),
+            Expanded(
+              child: _buildActionCard(
+                'Medicine Catalog',
+                Icons.menu_book,
+                const Color(0xFF009688),
+                () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const MedicineCatalogScreen(),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }
@@ -311,7 +347,7 @@ class _PatientHomeScreenState extends State<PatientHomeScreen> {
                 );
               },
               child: const TranslatedText(
-                'medicine',
+                'view_all',
                 style: TextStyle(color: Color(0xFF0C4556)),
                 fallback: 'View All',
               ),

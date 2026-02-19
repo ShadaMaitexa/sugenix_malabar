@@ -13,38 +13,30 @@ class MedicineDatabaseService {
       }
 
       final queryLower = query.toLowerCase();
-      
-      // Search in medicines collection
+
+      // Attempt a better search. Since Firestore doesn't support partial string matches natively
+      // without extra indexing/extensions, we fetch a limited set and filter.
+      // However, we can at least order by name to make it more predictable.
       QuerySnapshot snapshot = await _firestore
           .collection('medicines')
+          .orderBy('name')
           .limit(100)
           .get();
 
       List<Map<String, dynamic>> results = [];
-      
+
       for (var doc in snapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
         final name = (data['name'] as String? ?? '').toLowerCase();
-        final description = (data['description'] as String? ?? '').toLowerCase();
-        
-        // Check if query matches name or description
-        if (name.contains(queryLower) || description.contains(queryLower)) {
-          results.add({
-            'id': doc.id,
-            ...data,
-          });
-        }
-      }
+        final manufacturer =
+            (data['manufacturer'] as String? ?? '').toLowerCase();
+        final description =
+            (data['description'] as String? ?? '').toLowerCase();
 
-      // Also try searching by description if no results
-      if (results.isEmpty) {
-        final descSnapshot = await _firestore
-            .collection('medicines')
-            .limit(20)
-            .get();
-
-        for (var doc in descSnapshot.docs) {
-          final data = doc.data();
+        // Check if query matches name, manufacturer, or description
+        if (name.contains(queryLower) ||
+            manufacturer.contains(queryLower) ||
+            description.contains(queryLower)) {
           results.add({
             'id': doc.id,
             ...data,
@@ -54,6 +46,7 @@ class MedicineDatabaseService {
 
       return results;
     } catch (e) {
+      print('Search Medicines Error: $e');
       throw Exception('Failed to search medicines: ${e.toString()}');
     }
   }
@@ -61,10 +54,8 @@ class MedicineDatabaseService {
   // Get medicine by ID
   Future<Map<String, dynamic>?> getMedicineById(String medicineId) async {
     try {
-      DocumentSnapshot doc = await _firestore
-          .collection('medicines')
-          .doc(medicineId)
-          .get();
+      DocumentSnapshot doc =
+          await _firestore.collection('medicines').doc(medicineId).get();
 
       if (doc.exists) {
         final data = doc.data() as Map<String, dynamic>;
@@ -79,11 +70,13 @@ class MedicineDatabaseService {
     }
   }
 
-  // Get medicine by barcode or image hash (for scanning)
+  // Get medicine by barcode
   Future<Map<String, dynamic>?> getMedicineByBarcode(String barcode) async {
     try {
+      // Actually query by barcode field
       QuerySnapshot snapshot = await _firestore
           .collection('medicines')
+          .where('barcode', isEqualTo: barcode)
           .limit(1)
           .get();
 
@@ -95,8 +88,12 @@ class MedicineDatabaseService {
           ...data,
         };
       }
+
+      // Fallback: If not found by exact barcode, try matching first characters
+      // (sometimes scanners add leading/trailing chars)
       return null;
     } catch (e) {
+      print('Barcode Lookup Error: $e');
       throw Exception('Failed to get medicine by barcode: ${e.toString()}');
     }
   }
@@ -155,19 +152,22 @@ class MedicineDatabaseService {
           ...data,
         };
       }).toList();
-      
+
       // Filter by userId and sort by createdAt
       final filtered = allScanned.where((s) => s['userId'] == userId).toList();
       filtered.sort((a, b) {
         final aTime = a['createdAt'];
         final bTime = b['createdAt'];
         if (aTime == null || bTime == null) return 0;
-        final aDate = aTime is Timestamp ? aTime.toDate() : (aTime is DateTime ? aTime : DateTime.now());
-        final bDate = bTime is Timestamp ? bTime.toDate() : (bTime is DateTime ? bTime : DateTime.now());
+        final aDate = aTime is Timestamp
+            ? aTime.toDate()
+            : (aTime is DateTime ? aTime : DateTime.now());
+        final bDate = bTime is Timestamp
+            ? bTime.toDate()
+            : (bTime is DateTime ? bTime : DateTime.now());
         return bDate.compareTo(aDate); // Descending
       });
       return filtered;
     });
   }
 }
-

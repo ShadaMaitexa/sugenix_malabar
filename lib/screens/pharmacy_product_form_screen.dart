@@ -8,18 +8,19 @@ import 'dart:io';
 
 class PharmacyProductFormScreen extends StatefulWidget {
   final Map<String, dynamic>? product;
-  
+
   const PharmacyProductFormScreen({super.key, this.product});
 
   @override
-  State<PharmacyProductFormScreen> createState() => _PharmacyProductFormScreenState();
+  State<PharmacyProductFormScreen> createState() =>
+      _PharmacyProductFormScreenState();
 }
 
 class _PharmacyProductFormScreenState extends State<PharmacyProductFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  
+
   final _nameController = TextEditingController();
   final _priceController = TextEditingController();
   final _stockController = TextEditingController();
@@ -27,7 +28,8 @@ class _PharmacyProductFormScreenState extends State<PharmacyProductFormScreen> {
   final _manufacturerController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _dosageController = TextEditingController();
-  
+  final _barcodeController = TextEditingController();
+
   XFile? _imageFile;
   String? _imageUrl;
   bool _isAvailable = true;
@@ -47,17 +49,20 @@ class _PharmacyProductFormScreenState extends State<PharmacyProductFormScreen> {
     _nameController.text = product['name'] ?? '';
     _priceController.text = (product['price'] as num?)?.toString() ?? '';
     _stockController.text = (product['stock'] as num?)?.toString() ?? '';
-    _minQuantityController.text = (product['minQuantity'] as num?)?.toString() ?? '1';
+    _minQuantityController.text =
+        (product['minQuantity'] as num?)?.toString() ?? '1';
     _manufacturerController.text = product['manufacturer'] ?? '';
     _descriptionController.text = product['description'] ?? '';
     _dosageController.text = product['dosage'] ?? '';
+    _barcodeController.text = product['barcode'] ?? '';
     _isAvailable = product['isAvailable'] ?? true;
     _imageUrl = product['imageUrl'];
   }
 
   Future<void> _pickImage() async {
     try {
-      final image = await PlatformImageService.pickImage(source: ImageSource.gallery);
+      final image =
+          await PlatformImageService.pickImage(source: ImageSource.gallery);
       if (image != null) {
         setState(() {
           _imageFile = image;
@@ -73,7 +78,7 @@ class _PharmacyProductFormScreenState extends State<PharmacyProductFormScreen> {
 
   Future<String?> _uploadImage() async {
     if (_imageFile == null) return _imageUrl;
-    
+
     try {
       setState(() => _isUploading = true);
       final url = await CloudinaryService.uploadImage(_imageFile!);
@@ -87,23 +92,25 @@ class _PharmacyProductFormScreenState extends State<PharmacyProductFormScreen> {
 
   Future<void> _saveProduct() async {
     if (!_formKey.currentState!.validate()) return;
-    
+
     try {
       setState(() => _isLoading = true);
-      
+
       final userId = _auth.currentUser?.uid;
       if (userId == null) throw Exception('Not authenticated');
-      
+
       // Upload image if new one is selected
       String? imageUrl = _imageUrl;
       if (_imageFile != null) {
         imageUrl = await _uploadImage();
       }
-      
+
       final price = double.parse(_priceController.text);
       final stock = int.parse(_stockController.text);
-      final minQuantity = int.parse(_minQuantityController.text.isEmpty ? '1' : _minQuantityController.text);
-      
+      final minQuantity = int.parse(_minQuantityController.text.isEmpty
+          ? '1'
+          : _minQuantityController.text);
+
       final productData = {
         'name': _nameController.text.trim(),
         'price': price,
@@ -112,12 +119,13 @@ class _PharmacyProductFormScreenState extends State<PharmacyProductFormScreen> {
         'manufacturer': _manufacturerController.text.trim(),
         'description': _descriptionController.text.trim(),
         'dosage': _dosageController.text.trim(),
+        'barcode': _barcodeController.text.trim(),
         'isAvailable': _isAvailable && stock > 0,
         'pharmacyId': userId,
         'imageUrl': imageUrl,
         'updatedAt': FieldValue.serverTimestamp(),
       };
-      
+
       if (widget.product == null) {
         // Add new product
         productData['createdAt'] = FieldValue.serverTimestamp();
@@ -127,12 +135,15 @@ class _PharmacyProductFormScreenState extends State<PharmacyProductFormScreen> {
         );
       } else {
         // Update existing product
-        await _firestore.collection('medicines').doc(widget.product!['id']).update(productData);
+        await _firestore
+            .collection('medicines')
+            .doc(widget.product!['id'])
+            .update(productData);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Product updated successfully')),
         );
       }
-      
+
       if (mounted) Navigator.pop(context);
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -152,6 +163,7 @@ class _PharmacyProductFormScreenState extends State<PharmacyProductFormScreen> {
     _manufacturerController.dispose();
     _descriptionController.dispose();
     _dosageController.dispose();
+    _barcodeController.dispose();
     super.dispose();
   }
 
@@ -198,22 +210,26 @@ class _PharmacyProductFormScreenState extends State<PharmacyProductFormScreen> {
                                     child: Image.network(
                                       _imageUrl!,
                                       fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) => const Icon(Icons.image, size: 50),
+                                      errorBuilder: (_, __, ___) =>
+                                          const Icon(Icons.image, size: 50),
                                     ),
                                   )
                                 : Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      const Icon(Icons.add_photo_alternate, size: 50, color: Colors.grey),
+                                      const Icon(Icons.add_photo_alternate,
+                                          size: 50, color: Colors.grey),
                                       const SizedBox(height: 8),
-                                      Text('Add Image', style: TextStyle(color: Colors.grey[600])),
+                                      Text('Add Image',
+                                          style: TextStyle(
+                                              color: Colors.grey[600])),
                                     ],
                                   ),
                   ),
                 ),
               ),
               const SizedBox(height: 20),
-              
+
               // Product Name
               TextFormField(
                 controller: _nameController,
@@ -225,7 +241,7 @@ class _PharmacyProductFormScreenState extends State<PharmacyProductFormScreen> {
                 validator: (v) => v!.isEmpty ? 'Required' : null,
               ),
               const SizedBox(height: 15),
-              
+
               // Manufacturer
               TextFormField(
                 controller: _manufacturerController,
@@ -236,7 +252,7 @@ class _PharmacyProductFormScreenState extends State<PharmacyProductFormScreen> {
                 ),
               ),
               const SizedBox(height: 15),
-              
+
               // Price
               TextFormField(
                 controller: _priceController,
@@ -253,7 +269,7 @@ class _PharmacyProductFormScreenState extends State<PharmacyProductFormScreen> {
                 },
               ),
               const SizedBox(height: 15),
-              
+
               // Stock
               TextFormField(
                 controller: _stockController,
@@ -270,7 +286,7 @@ class _PharmacyProductFormScreenState extends State<PharmacyProductFormScreen> {
                 },
               ),
               const SizedBox(height: 15),
-              
+
               // Min Quantity
               TextFormField(
                 controller: _minQuantityController,
@@ -282,12 +298,13 @@ class _PharmacyProductFormScreenState extends State<PharmacyProductFormScreen> {
                 ),
                 keyboardType: TextInputType.number,
                 validator: (v) {
-                  if (v!.isNotEmpty && int.tryParse(v) == null) return 'Invalid quantity';
+                  if (v!.isNotEmpty && int.tryParse(v) == null)
+                    return 'Invalid quantity';
                   return null;
                 },
               ),
               const SizedBox(height: 15),
-              
+
               // Dosage
               TextFormField(
                 controller: _dosageController,
@@ -298,7 +315,19 @@ class _PharmacyProductFormScreenState extends State<PharmacyProductFormScreen> {
                 ),
               ),
               const SizedBox(height: 15),
-              
+
+              // Barcode
+              TextFormField(
+                controller: _barcodeController,
+                decoration: const InputDecoration(
+                  labelText: 'Barcode',
+                  prefixIcon: Icon(Icons.qr_code),
+                  border: OutlineInputBorder(),
+                  helperText: 'Scan or enter the barcode for this medicine',
+                ),
+              ),
+              const SizedBox(height: 15),
+
               // Description
               TextFormField(
                 controller: _descriptionController,
@@ -310,7 +339,7 @@ class _PharmacyProductFormScreenState extends State<PharmacyProductFormScreen> {
                 maxLines: 3,
               ),
               const SizedBox(height: 15),
-              
+
               // Availability Toggle
               SwitchListTile(
                 title: const Text('Available'),
@@ -320,7 +349,7 @@ class _PharmacyProductFormScreenState extends State<PharmacyProductFormScreen> {
                 activeColor: const Color(0xFF0C4556),
               ),
               const SizedBox(height: 30),
-              
+
               // Save Button
               SizedBox(
                 width: double.infinity,
@@ -336,8 +365,11 @@ class _PharmacyProductFormScreenState extends State<PharmacyProductFormScreen> {
                   child: _isLoading
                       ? const CircularProgressIndicator(color: Colors.white)
                       : Text(
-                          widget.product == null ? 'Add Product' : 'Update Product',
-                          style: const TextStyle(color: Colors.white, fontSize: 16),
+                          widget.product == null
+                              ? 'Add Product'
+                              : 'Update Product',
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 16),
                         ),
                 ),
               ),
@@ -348,4 +380,3 @@ class _PharmacyProductFormScreenState extends State<PharmacyProductFormScreen> {
     );
   }
 }
-
