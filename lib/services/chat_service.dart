@@ -75,7 +75,7 @@ class ChatService {
         .collection('chats')
         .doc(chatId)
         .collection('messages')
-        .orderBy('timestamp', descending: true)
+
         .snapshots();
   }
 
@@ -108,7 +108,7 @@ class ChatService {
     return _firestore
         .collection('chats')
         .where('participants', arrayContains: userId)
-        .orderBy('updatedAt', descending: true)
+        
         .snapshots()
         .map((snapshot) {
       return snapshot.docs.map((doc) {

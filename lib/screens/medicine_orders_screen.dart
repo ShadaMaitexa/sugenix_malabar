@@ -165,8 +165,7 @@ class _MedicineOrdersScreenState extends State<MedicineOrdersScreen> {
             children: [
               _buildSearchBar(),
               const SizedBox(height: 16),
-              _buildQuickBuyRow(),
-              const SizedBox(height: 20),
+              
               if (_searching)
                 const Center(child: CircularProgressIndicator())
               else if (_results.isNotEmpty)
@@ -206,93 +205,6 @@ class _MedicineOrdersScreenState extends State<MedicineOrdersScreen> {
     );
   }
 
-  /// Prominent quick-access row for Buy Medicines & Medicine Catalog
-  Widget _buildQuickBuyRow() {
-    return Row(
-      children: [
-        Expanded(
-          child: GestureDetector(
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const MedicineCatalogScreen()),
-            ),
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF0C4556), Color(0xFF1A6B7A)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF0C4556).withOpacity(0.25),
-                    blurRadius: 10,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.shopping_cart, color: Colors.white, size: 22),
-                  SizedBox(width: 8),
-                  Text(
-                    'Buy Medicines',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: GestureDetector(
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const MedicineCatalogScreen()),
-            ),
-            child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFF0C4556), width: 1.5),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.06),
-                    blurRadius: 10,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.menu_book, color: Color(0xFF0C4556), size: 22),
-                  SizedBox(width: 8),
-                  Text(
-                    'Medicine Catalog',
-                    style: TextStyle(
-                      color: Color(0xFF0C4556),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
 
   Widget _buildMedicineServices() {
     final services = [
