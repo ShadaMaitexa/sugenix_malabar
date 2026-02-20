@@ -272,6 +272,8 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
 
         if (result['type'] == 'no_contacts') {
           _showNoContactsDialog();
+        } else if (result['type'] == 'no_email') {
+          _showNoEmailDialog();
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -350,6 +352,33 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
             style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF0C4556)),
             child: const Text("Add Contacts",
+                style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showNoEmailDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("No Email on Contacts"),
+        content: const Text(
+            "SOS sends alerts by email. None of your emergency contacts have an email address. Please open Emergency Contacts and add an email to at least one contact."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Later"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/emergency_contacts');
+            },
+            style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0C4556)),
+            child: const Text("Edit Contacts",
                 style: TextStyle(color: Colors.white)),
           ),
         ],

@@ -23,7 +23,7 @@ class EmailJSService {
   static const String _serviceId =
       'service_f6ka8jm'; // TODO: Replace with your EmailJS Service ID
   static const String _templateId =
-      'template_u50mo7i'; // TODO: Replace with your EmailJS Template ID
+      'template_u50mo7i'; // TODO: Replace with your EmailJS Template ID (used for both admin approval and SOS emails)
   static const String _publicKey =
       'CHxG3ZYeXEUuvz1MA'; // TODO: Replace with your EmailJS Public Key (User ID)
   static const String _baseUrl = 'https://api.emailjs.com/api/v1.0/email/send';
@@ -194,7 +194,8 @@ We appreciate your interest in joining the Sugenix platform.'''
     }
   }
 
-  /// Send Emergency SOS email to emergency contacts
+  /// Send Emergency SOS email to emergency contacts (uses same template as approval emails).
+  /// Message includes current location; lat/long and map_url are also sent for template use.
   static Future<bool> sendSOSEmail({
     required String recipientEmail,
     required String recipientName,
@@ -204,8 +205,9 @@ We appreciate your interest in joining the Sugenix platform.'''
     double? longitude,
   }) async {
     try {
-      final subject = '🚨 CRITICAL: SOS Emergency Alert from $userName';
-      final title = '🚨 MEDICAL EMERGENCY ALERT';
+      // No emojis in subject/title to avoid encoding issues (same as approval emails)
+      final subject = 'CRITICAL: SOS Emergency Alert from $userName';
+      final title = 'MEDICAL EMERGENCY ALERT';
 
       final response = await http.post(
         Uri.parse(_baseUrl),
@@ -218,20 +220,21 @@ We appreciate your interest in joining the Sugenix platform.'''
           'user_id': _publicKey,
           'template_params': {
             'to_email': recipientEmail,
-            'name': recipientName, // Matches {{name}} in your screenshot
-            'email': 'support@sugenix.app', // Matches {{email}} in Reply-To
+            'name': recipientName,
+            'email': 'support@sugenix.app',
             'to_name': recipientName,
+            'subject': subject,
+            'title': title,
+            'message': message,
             'user_name': userName,
             'from_name': userName,
-            'subject': subject, // Matches {{subject}} in your screenshot
-            'title': title,
-            'message': message, // Matches {{message}} in your screenshot
-            'latitude': latitude ?? 0.0,
-            'longitude': longitude ?? 0.0,
+            'latitude': latitude?.toString() ?? '0.0',
+            'longitude': longitude?.toString() ?? '0.0',
             'map_url': latitude != null && longitude != null
                 ? 'https://maps.google.com/?q=$latitude,$longitude'
                 : '',
             'app_name': 'Sugenix',
+            'login_url': 'https://sugenix.app/login',
           },
         }),
       );

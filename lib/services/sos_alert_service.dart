@@ -180,6 +180,20 @@ Sent from: Sugenix - Diabetes Management App
         };
       }
 
+      // Require at least one contact with email (SOS sends via EmailJS)
+      final contactsWithEmail = emergencyContacts
+          .where((c) =>
+              (c['email'] != null && c['email'].toString().trim().isNotEmpty))
+          .toList();
+      if (contactsWithEmail.isEmpty) {
+        return {
+          'success': false,
+          'error':
+              'No emergency contact has an email address. Please add email to at least one contact in Emergency Contacts.',
+          'type': 'no_email',
+        };
+      }
+
       // Generate SOS message
       final sosMessage = _generateSOSMessage(
         userName: userName,
