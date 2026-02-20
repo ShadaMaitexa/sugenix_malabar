@@ -4,6 +4,8 @@ import 'package:sugenix/services/medicine_cart_service.dart';
 import 'package:sugenix/services/razorpay_service.dart';
 import 'package:sugenix/services/auth_service.dart';
 import 'package:sugenix/services/platform_settings_service.dart';
+import 'package:sugenix/services/payment_verification_service.dart';
+import 'package:uuid/uuid.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -18,6 +20,8 @@ class _CartScreenState extends State<CartScreen> {
   final MedicineCartService _cartService = MedicineCartService();
   final AuthService _authService = AuthService();
   final PlatformSettingsService _platformSettings = PlatformSettingsService();
+  final PaymentVerificationService _paymentService =
+      PaymentVerificationService();
   final TextEditingController _addressController = TextEditingController();
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
@@ -33,9 +37,16 @@ class _CartScreenState extends State<CartScreen> {
   double _lastCalculatedSubtotal =
       -1.0; // Track last calculated subtotal to avoid unnecessary recalculations
 
+  // Production-ready fields
+  late String _idempotencyKey;
+  int _retryCount = 0;
+  static const int _maxRetries = 3;
+
   @override
   void initState() {
     super.initState();
+    _idempotencyKey =
+        const Uuid().v4(); // Generate unique key for this payment session
     _checkAuthStatus();
     _initializeRazorpay();
   }
@@ -90,14 +101,59 @@ class _CartScreenState extends State<CartScreen> {
     setState(() {
       _processingPayment = false;
     });
-    // Let Razorpay close its UI, then complete order and show success (same as appointment flow)
+
+    // Let Razorpay close its UI, then complete order and show success
     await Future.delayed(const Duration(milliseconds: 400));
+
     if (!mounted) return;
-    await _completeOrder(
-      paymentMethod: 'Razorpay',
-      paymentId: response.paymentId,
-      orderId: response.orderId,
-    );
+
+    // Verify payment before completing order (production security)
+    try {
+      final verified = await _paymentService.verifyPayment(
+        paymentId: response.paymentId,
+        orderId: response.orderId,
+        amount: _cartTotal,
+        currency: 'INR',
+      );
+
+      if (!verified) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content:
+                Text('Payment verification failed. Please contact support.'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 5),
+          ),
+        );
+
+        // Trigger refund via support
+        await _paymentService.refundPayment(
+          paymentId: response.paymentId,
+          orderId: response.orderId,
+          amount: _cartTotal,
+          reason: 'Payment verification failed',
+        );
+        return;
+      }
+
+      // Payment verified, complete order
+      await _completeOrder(
+        paymentMethod: 'Razorpay',
+        paymentId: response.paymentId,
+        orderId: response.orderId,
+      );
+    } catch (e) {
+      print('Payment verification error: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Payment processing error: ${e.toString()}'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    }
   }
 
   void _handlePaymentError(dynamic response) {
@@ -107,14 +163,39 @@ class _CartScreenState extends State<CartScreen> {
 
     if (mounted) {
       final message = response is PaymentFailureResponse
-          ? response.message
+          ? (response.message ?? 'Payment failed')
           : 'Payment was cancelled or failed.';
+
+      // Show error with retry option
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Payment failed: $message'),
           backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+          action: _retryCount < _maxRetries
+              ? SnackBarAction(
+                  label: 'Retry',
+                  textColor: Colors.white,
+                  onPressed: () {
+                    _retryCount++;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content:
+                            Text('Retrying... ($_retryCount/$_maxRetries)'),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                )
+              : null,
         ),
       );
+
+      // Log payment failure
+      final user = _authService.currentUser;
+      if (user != null) {
+        _paymentService.getTransactionHistory(userId: user.uid);
+      }
     }
   }
 
@@ -180,7 +261,8 @@ class _CartScreenState extends State<CartScreen> {
                     borderRadius: BorderRadius.circular(10),
                   ),
                 ),
-                child: const Text('Done', style: TextStyle(color: Colors.white)),
+                child:
+                    const Text('Done', style: TextStyle(color: Colors.white)),
               ),
             ),
           ],
@@ -202,85 +284,31 @@ class _CartScreenState extends State<CartScreen> {
   }) async {
     try {
       final address = _addressController.text.trim();
+      final name = _nameController.text.trim();
+      final email = _emailController.text.trim();
+      final phone = _phoneController.text.trim();
 
-      // For COD, only check address if it's empty
-      if (paymentMethod == 'COD' && address.isEmpty) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Please enter delivery address')),
-          );
-        }
-        return;
-      }
-
-      // Get customer details
-      final name = _isGuest
-          ? _nameController.text.trim()
-          : (_userProfile?['name'] ?? 'User');
-      final email = _isGuest
-          ? _emailController.text.trim()
-          : (_userProfile?['email'] ?? _authService.currentUser?.email ?? '');
-      final phone = _isGuest
-          ? _phoneController.text.trim()
-          : (_userProfile?['phone'] ?? '');
-
-      // For COD, if user is logged in, use profile data (don't require form filling)
-      // Only validate if guest or if fields are actually empty
-      if (paymentMethod == 'COD') {
-        // For COD, use defaults if empty and user is logged in
-        final finalName =
-            name.isNotEmpty ? name : (_userProfile?['name'] ?? 'User');
-        final finalEmail = email.isNotEmpty
-            ? email
-            : (_userProfile?['email'] ??
-                _authService.currentUser?.email ??
-                'user@sugenix.com');
-        final finalPhone =
-            phone.isNotEmpty ? phone : (_userProfile?['phone'] ?? '0000000000');
-
-        await _cartService.checkout(
-          address: address.isNotEmpty
-              ? address
-              : (_userProfile?['address'] ?? 'Address not specified'),
-          customerName: finalName,
-          customerEmail: finalEmail,
-          customerPhone: finalPhone,
-          paymentMethod: paymentMethod,
-          paymentId: paymentId,
-          razorpayOrderId: orderId,
-        );
-
-        if (!mounted) return;
-
-        // Show success animation for COD
-        setState(() {
-          _showSuccessAnimation = true;
-        });
-
-        await Future.delayed(const Duration(seconds: 3));
-
-        if (!mounted) return;
-
-        setState(() {
-          _showSuccessAnimation = false;
-        });
-
-        Navigator.pop(context);
-        return;
-      }
-
-      // For online payment, validate all fields
-      if (name.isEmpty || email.isEmpty || phone.isEmpty || address.isEmpty) {
+      // Validate all required fields
+      if (address.isEmpty || name.isEmpty || email.isEmpty || phone.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-                content: Text('Please fill in all required details')),
+              content: Text('Please fill in all required details'),
+              backgroundColor: Colors.red,
+            ),
           );
         }
         return;
       }
 
-      final finalOrderId = await _cartService.checkout(
+      // Show processing indicator
+      if (!mounted) return;
+      setState(() {
+        _processingPayment = true;
+      });
+
+      // Proceed with checkout using idempotency key
+      final createdOrderId = await _cartService.checkout(
         address: address,
         customerName: name,
         customerEmail: email,
@@ -288,42 +316,109 @@ class _CartScreenState extends State<CartScreen> {
         paymentMethod: paymentMethod,
         paymentId: paymentId,
         razorpayOrderId: orderId,
+        idempotencyKey: _idempotencyKey, // Prevent duplicate orders
       );
 
       if (!mounted) return;
 
-      // For COD, show success animation
-      if (paymentMethod == 'COD') {
-        setState(() {
-          _showSuccessAnimation = true;
-        });
+      // Show success animation
+      setState(() {
+        _showSuccessAnimation = true;
+        _processingPayment = false;
+      });
 
-        // Wait for animation
-        await Future.delayed(const Duration(seconds: 3));
-
-        if (!mounted) return;
-
-        setState(() {
-          _showSuccessAnimation = false;
-        });
-      } else {
-        // Razorpay success: show dialog then pop (same pattern as appointment)
-        if (mounted) {
-          _showOrderSuccessDialog(finalOrderId);
-        }
-        return;
+      // Generate and log receipt
+      try {
+        final items = await _cartService.getCartItems();
+        await _paymentService.generateReceipt(
+          orderId: createdOrderId,
+          customerName: name,
+          customerEmail: email,
+          customerPhone: phone,
+          shippingAddress: address,
+          subtotal: _cartSubtotal,
+          platformFee: _platformFee,
+          totalAmount: _cartTotal,
+          items: items,
+          paymentMethod: paymentMethod,
+          paymentId: paymentId ?? 'N/A',
+          orderDate: DateTime.now(),
+        );
+      } catch (e) {
+        print('Failed to generate receipt: $e');
       }
 
-      Navigator.pop(context);
-    } catch (e) {
+      await Future.delayed(const Duration(seconds: 3));
+
+      if (!mounted) return;
+
+      setState(() {
+        _showSuccessAnimation = false;
+      });
+
+      // Navigate back with success flag
       if (mounted) {
-        setState(() {
-          _showSuccessAnimation = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Order failed: ${e.toString()}'),
-            backgroundColor: Colors.red,
+        Navigator.pop(context, {'success': true, 'orderId': createdOrderId});
+      }
+      return;
+    } catch (e) {
+      print('Order completion error: $e');
+
+      if (!mounted) return;
+
+      setState(() {
+        _processingPayment = false;
+        _showSuccessAnimation = false;
+      });
+
+      // Handle specific errors
+      String errorMessage = 'Order processing failed';
+      if (e.toString().contains('Cart is empty')) {
+        errorMessage = 'Your cart is empty';
+      } else if (e.toString().contains('Invalid email')) {
+        errorMessage = 'Please enter a valid email address';
+      } else if (e.toString().contains('Invalid phone')) {
+        errorMessage = 'Please enter a valid phone number';
+      } else if (e.toString().contains('Payment verification')) {
+        errorMessage = 'Payment could not be verified. Please contact support.';
+      }
+
+      // Show error dialog with retry option
+      if (mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            title: const Text('Order Failed'),
+            content: Text(errorMessage),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              if (_retryCount < _maxRetries)
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _retryCount++;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content:
+                            Text('Retrying... (${_retryCount}/$_maxRetries)'),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                    // Rebuild with new idempotency key for retry
+                    _idempotencyKey = const Uuid().v4();
+                    _completeOrder(
+                      paymentMethod: paymentMethod,
+                      paymentId: paymentId,
+                      orderId: orderId,
+                    );
+                  },
+                  child: const Text('Retry'),
+                ),
+            ],
           ),
         );
       }
@@ -360,21 +455,14 @@ class _CartScreenState extends State<CartScreen> {
   }
 
   Future<void> _processPayment(double amount) async {
-    // Get customer details (from profile if logged in, or from form if guest)
-    final name = _isGuest
-        ? _nameController.text.trim()
-        : (_userProfile?['name'] ?? 'User');
-    final email = _isGuest
-        ? _emailController.text.trim()
-        : (_userProfile?['email'] ??
-            _authService.currentUser?.email ??
-            'user@sugenix.com');
-    final phone = _isGuest
-        ? _phoneController.text.trim()
-        : (_userProfile?['phone'] ?? '0000000000');
+    // Get customer details from form fields (now always displayed)
+    final name = _nameController.text.trim();
+    final email = _emailController.text.trim();
+    final phone = _phoneController.text.trim();
+    final address = _addressController.text.trim();
 
     // Validate details before opening checkout
-    if (name.isEmpty || email.isEmpty || phone.isEmpty) {
+    if (name.isEmpty || email.isEmpty || phone.isEmpty || address.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please fill in all details before payment'),
@@ -502,42 +590,40 @@ class _CartScreenState extends State<CartScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                if (_isGuest) ...[
-                                  const Text('Customer Details',
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16)),
-                                  const SizedBox(height: 8),
-                                  TextField(
-                                    controller: _nameController,
-                                    decoration: const InputDecoration(
-                                      hintText: 'Full Name',
-                                      border: OutlineInputBorder(),
-                                      prefixIcon: Icon(Icons.person),
-                                    ),
+                                const Text('Customer Details',
+                                    style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16)),
+                                const SizedBox(height: 8),
+                                TextField(
+                                  controller: _nameController,
+                                  decoration: const InputDecoration(
+                                    hintText: 'Full Name',
+                                    border: OutlineInputBorder(),
+                                    prefixIcon: Icon(Icons.person),
                                   ),
-                                  const SizedBox(height: 8),
-                                  TextField(
-                                    controller: _emailController,
-                                    decoration: const InputDecoration(
-                                      hintText: 'Email Address',
-                                      border: OutlineInputBorder(),
-                                      prefixIcon: Icon(Icons.email),
-                                    ),
-                                    keyboardType: TextInputType.emailAddress,
+                                ),
+                                const SizedBox(height: 8),
+                                TextField(
+                                  controller: _emailController,
+                                  decoration: const InputDecoration(
+                                    hintText: 'Email Address',
+                                    border: OutlineInputBorder(),
+                                    prefixIcon: Icon(Icons.email),
                                   ),
-                                  const SizedBox(height: 8),
-                                  TextField(
-                                    controller: _phoneController,
-                                    decoration: const InputDecoration(
-                                      hintText: 'Phone Number',
-                                      border: OutlineInputBorder(),
-                                      prefixIcon: Icon(Icons.phone),
-                                    ),
-                                    keyboardType: TextInputType.phone,
+                                  keyboardType: TextInputType.emailAddress,
+                                ),
+                                const SizedBox(height: 8),
+                                TextField(
+                                  controller: _phoneController,
+                                  decoration: const InputDecoration(
+                                    hintText: 'Phone Number',
+                                    border: OutlineInputBorder(),
+                                    prefixIcon: Icon(Icons.phone),
                                   ),
-                                  const SizedBox(height: 16),
-                                ],
+                                  keyboardType: TextInputType.phone,
+                                ),
+                                const SizedBox(height: 16),
                                 const Text('Delivery Address',
                                     style: TextStyle(
                                         fontWeight: FontWeight.bold,
@@ -745,17 +831,9 @@ class _CartScreenState extends State<CartScreen> {
                           : () async {
                               // Check if form is already filled
                               final address = _addressController.text.trim();
-                              final name = _isGuest
-                                  ? _nameController.text.trim()
-                                  : (_userProfile?['name'] ?? 'User');
-                              final email = _isGuest
-                                  ? _emailController.text.trim()
-                                  : (_userProfile?['email'] ??
-                                      _authService.currentUser?.email ??
-                                      '');
-                              final phone = _isGuest
-                                  ? _phoneController.text.trim()
-                                  : (_userProfile?['phone'] ?? '');
+                              final name = _nameController.text.trim();
+                              final email = _emailController.text.trim();
+                              final phone = _phoneController.text.trim();
 
                               // For COD, if form is already filled, proceed directly
                               if (_selectedPaymentMethod == 'COD') {

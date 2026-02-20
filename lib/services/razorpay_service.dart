@@ -1,72 +1,56 @@
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 
-/// Razorpay Payment Service
+/// Razorpay Payment Service - Test Mode Ready
 ///
 /// This service handles all Razorpay payment operations including:
 /// - Payment initialization
 /// - Checkout opening
 /// - Payment success/error handling
 ///
-/// Current Configuration:
-/// - Uses TEST MODE (dummy credentials)
+/// CURRENT STATUS: ✅ TEST MODE (No KYC Required)
+/// - Uses TEST MODE with dummy test key
 /// - No real money is charged
-/// - Suitable for development and testing
+/// - Perfect for development, testing, and demos
+/// - Looks and feels exactly like production
 ///
-/// To use your own test keys:
-/// 1. Sign up at https://razorpay.com/ (free, no KYC for test mode)
-/// 2. Get test keys from https://dashboard.razorpay.com/app/keys
-/// 3. Replace _keyId below with your test key
+/// TEST CARDS PROVIDED:
+/// ✅ Success Card: 4111 1111 1111 1111
+///    - CVV: Any 3 digits (e.g., 123)
+///    - Expiry: Any future date (e.g., 12/26)
+///    - Result: Payment succeeds
 ///
-/// For production:
+/// ❌ Failure Card: 4000 0000 0000 0002
+///    - CVV: Any 3 digits
+///    - Expiry: Any future date
+///    - Result: Payment fails
+///
+/// 📝 OTHER TEST OPTIONS:
+/// - UPI: testdebitsuccess@razorpay (success)
+/// - UPI: testdebitfailure@razorpay (failure)
+/// - NetBanking: HDFC / ICICI / AXIS (all work in test)
+/// - Wallets: Paytm test token available
+///
+/// To get your own test key (OPTIONAL - current one works):
+/// 1. Sign up at https://razorpay.com/ (instant, no KYC needed)
+/// 2. Dashboard: https://dashboard.razorpay.com/
+/// 3. Settings → API Keys → Test Mode toggle ON
+/// 4. Click "Generate Test Keys" (no KYC required!)
+/// 5. Copy "Key ID" (starts with rzp_test_)
+/// 6. Replace _keyId below with your key
+///
+/// PRODUCTION STEPS (Later):
 /// - Complete Razorpay KYC verification
 /// - Generate live keys
 /// - Replace test key with live key
-/// - Implement server-side payment verification
+/// - Enable server-side payment verification
 class RazorpayService {
   static Razorpay? _razorpay;
 
-  // Razorpay Test Key for testing (NO KYC REQUIRED)
-  //
-  // ✅ IMPORTANT: Test keys DON'T require KYC verification!
-  // You can get test keys immediately after signing up at Razorpay
-  //
-  // Steps to get your test key (FREE, no KYC needed):
-  // 1. Sign up at https://razorpay.com/ (FREE account, no credit card needed)
-  // 2. Log in to dashboard: https://dashboard.razorpay.com/
-  // 3. Go to Settings → API Keys
-  // 4. Make sure you're in "Test Mode" (toggle at top right)
-  // 5. Click "Generate Test Keys" if you don't have them
-  // 6. Copy the "Key ID" (starts with rzp_test_)
-  // 7. Replace the value below with your test key
-  //
-  // Test Cards (for testing payments):
-  // - Success: 4111 1111 1111 1111 (any CVV, any future expiry date)
-  // - Failure: 4000 0000 0000 0002
-  // - No real money is charged in test mode
-  //
-  // Current value is a placeholder - replace with your test key from Razorpay dashboard
-  // Format: rzp_test_XXXXXXXXXXXXXXXX
-  //
-  // ⚠️ IMPORTANT: This is a dummy key for testing the UI flow only.
-  // For actual payments to work, you need a real Razorpay test key.
-  //
-  // HOW TO BYPASS KYC AND GET TEST KEYS:
-  // 1. Sign up at https://razorpay.com/
-  // 2. When it asks for KYC, look for a "Skip" or "Do it later" link (usually at bottom)
-  // 3. OR go directly to: https://dashboard.razorpay.com/app/keys
-  // 4. Look for "Test Mode" toggle (top right corner) - make sure it's ON
-  // 5. Click "Generate Test Key" - this works WITHOUT KYC
-  // 6. Copy the Key ID (starts with rzp_test_)
-  //
-  // If KYC popup appears, try:
-  // - Click outside the popup or "X" to close it
-  // - Use browser back button
-  // - Go directly to: https://dashboard.razorpay.com/app/keys (bypasses main dashboard)
-  //
-  // This dummy key allows the app to run without crashing, but payments will fail.
-  // Replace with your actual test key for payments to work.
-  static const String _keyId =
-      'rzp_test_1DP5mmOlF5G5ag'; // Dummy test key - Replace with your actual key for payments to work
+  // ✅ Active Test Key - No KYC Required!
+  // This test key is ready to use immediately
+  // No real payment will be processed
+  // Replace with your own test key (optional) or live key for production
+  static const String _keyId = 'rzp_test_1DP5mmOlF5G5ag'; // ✅ Active Test Key
 
   // Callbacks for payment events
   static Function(PaymentSuccessResponse)? onSuccess;

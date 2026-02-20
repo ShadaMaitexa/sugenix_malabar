@@ -3,7 +3,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sugenix/services/platform_settings_service.dart';
 import 'package:sugenix/services/revenue_service.dart';
+import 'package:sugenix/services/payment_verification_service.dart';
 import 'dart:convert';
+import 'package:uuid/uuid.dart';
 
 class MedicineCartService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -226,7 +228,19 @@ class MedicineCartService {
     String paymentMethod = 'COD',
     String? paymentId,
     String? razorpayOrderId,
+    String? idempotencyKey,
   }) async {
+    // Generate idempotency key if not provided
+    final key = idempotencyKey ?? const Uuid().v4();
+
+    // Check if order with this idempotency key already exists
+    final paymentService = PaymentVerificationService();
+    final existingOrder = await paymentService.getExistingOrder(key);
+    if (existingOrder != null) {
+      print('Order already exists with idempotency key: $key');
+      return existingOrder['id'] as String;
+    }
+
     // Get cart items (works for both authenticated and guest users)
     final items = await getCartItems();
     if (items.isEmpty) {
@@ -240,6 +254,11 @@ class MedicineCartService {
       subtotal += price * qty;
       return {'id': data['id'] ?? data['medicineId'], ...data};
     }).toList();
+
+    // Validate items
+    if (processedItems.isEmpty) {
+      throw Exception('No items in cart');
+    }
 
     // Get pharmacy ID from first item (if available). If not present, try looking up
     // medicine documents for ownership fields like `pharmacyId`, `pharmacy` or `owner`.
@@ -285,7 +304,32 @@ class MedicineCartService {
     final pharmacyAmount = feeCalculation['pharmacyAmount'] ?? subtotal;
     final total = feeCalculation['totalAmount'] ?? subtotal;
 
+    // For Razorpay payments, verify payment first
+    if (paymentMethod == 'Razorpay' && paymentId != null) {
+      final verified = await paymentService.verifyPayment(
+        paymentId: paymentId,
+        orderId: razorpayOrderId ?? 'pending',
+        amount: total,
+        currency: 'INR',
+      );
+
+      if (!verified) {
+        throw Exception('Payment verification failed. Please contact support.');
+      }
+    }
+
+    // Validate email format
+    if (!_isValidEmail(customerEmail)) {
+      throw Exception('Invalid email address');
+    }
+
+    // Validate phone number
+    if (!_isValidPhone(customerPhone)) {
+      throw Exception('Invalid phone number');
+    }
+
     final orderData = {
+      'idempotencyKey': key, // For idempotency
       'userId': _uid, // null for guest users
       'isGuest': _uid == null,
       'customerName': customerName,
@@ -303,6 +347,9 @@ class MedicineCartService {
       'paymentMethod': paymentMethod,
       'paymentStatus': paymentMethod == 'Razorpay' ? 'paid' : 'pending',
       'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+      'estDeliveryDate':
+          DateTime.now().add(const Duration(days: 5)).toIso8601String(),
       if (paymentId != null) 'paymentId': paymentId,
       if (razorpayOrderId != null) 'razorpayOrderId': razorpayOrderId,
       if (pharmacyId != null) 'pharmacyId': pharmacyId,
@@ -330,6 +377,21 @@ class MedicineCartService {
       await clearCart();
     }
 
+    // Send order confirmation email
+    try {
+      await paymentService.sendOrderConfirmationEmail(
+        email: customerEmail,
+        customerName: customerName,
+        orderId: orderRef.id,
+        items: processedItems,
+        totalAmount: total,
+        address: address,
+      );
+    } catch (e) {
+      print('Failed to send email: $e');
+      // Don't fail the order if email fails
+    }
+
     // Record revenue transaction
     try {
       await _revenueService.recordMedicineOrderRevenue(
@@ -344,9 +406,22 @@ class MedicineCartService {
         paymentMethod: paymentMethod,
       );
     } catch (e) {
+      print('Failed to record revenue: $e');
       // Silently fail - revenue tracking is not critical
     }
 
     return orderRef.id;
+  }
+
+  /// Validate email format
+  bool _isValidEmail(String email) {
+    final emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
+    return emailRegex.hasMatch(email);
+  }
+
+  /// Validate phone format
+  bool _isValidPhone(String phone) {
+    final phoneRegex = RegExp(r'^[\d\s\-\+\(\)]{10,}$');
+    return phoneRegex.hasMatch(phone.replaceAll(RegExp(r'[^\d]'), ''));
   }
 }
