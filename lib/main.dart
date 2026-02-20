@@ -41,6 +41,8 @@ import 'package:provider/provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:sugenix/screens/web_landing_screen.dart';
 import 'package:sugenix/screens/unsupported_role_screen.dart';
+import 'package:sugenix/screens/chat_list_screen.dart';
+import 'package:sugenix/services/language_service.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
@@ -227,6 +229,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       if (!kIsWeb) {
         return [
           const DoctorDashboardScreen(),
+          const ChatListScreen(),
           const ProfileScreen(),
         ];
       }
@@ -237,6 +240,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         return [
           const PatientHomeScreen(),
           const GlucoseMonitoringScreen(),
+          const ChatListScreen(),
           const MedicalRecordsScreen(),
           const MedicineOrdersScreen(),
           const ProfileScreen(),
@@ -328,6 +332,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           label: l10n.dashboard,
         ),
         BottomNavigationBarItem(
+          icon: Icon(Icons.chat_outlined, size: 24),
+          activeIcon: Icon(Icons.chat, size: 24),
+          label: LanguageService.translate(
+              'chats', LanguageService.getCurrentLanguage()),
+        ),
+        BottomNavigationBarItem(
           icon: Icon(Icons.person_outline, size: 24),
           activeIcon: Icon(Icons.person, size: 24),
           label: l10n.profile,
@@ -354,6 +364,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           icon: Icon(Icons.monitor_heart_outlined, size: 24),
           activeIcon: Icon(Icons.monitor_heart, size: 24),
           label: l10n.glucose,
+        ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.chat_outlined, size: 24),
+          activeIcon: Icon(Icons.chat, size: 24),
+          label: LanguageService.translate(
+              'chats', LanguageService.getCurrentLanguage()),
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.assignment_outlined, size: 24),

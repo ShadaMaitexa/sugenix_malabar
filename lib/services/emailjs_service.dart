@@ -200,6 +200,8 @@ We appreciate your interest in joining the Sugenix platform.'''
     required String recipientName,
     required String userName,
     required String message,
+    double? latitude,
+    double? longitude,
   }) async {
     try {
       final subject = '🚨 CRITICAL: SOS Emergency Alert from $userName';
@@ -224,6 +226,11 @@ We appreciate your interest in joining the Sugenix platform.'''
             'subject': subject, // Matches {{subject}} in your screenshot
             'title': title,
             'message': message, // Matches {{message}} in your screenshot
+            'latitude': latitude ?? 0.0,
+            'longitude': longitude ?? 0.0,
+            'map_url': latitude != null && longitude != null
+                ? 'https://maps.google.com/?q=$latitude,$longitude'
+                : '',
             'app_name': 'Sugenix',
           },
         }),

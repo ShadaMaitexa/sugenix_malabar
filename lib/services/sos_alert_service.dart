@@ -20,15 +20,16 @@ class SOSAlertService {
     required List<Map<String, dynamic>> recentReadings,
   }) {
     String message = '''🚨 SOS EMERGENCY ALERT 🚨
-
+    
 User: $userName
 Alert Type: Medical Emergency
 
 Location Details:
-${address != null ? 'Address: $address' : ''}
-${latitude != null && longitude != null ? 'GPS Coordinates: $latitude, $longitude\nView Location: https://maps.google.com/?q=$latitude,$longitude' : 'Location: Not available'}
+${address != null && !address.startsWith('Lat:') ? 'Address: $address' : ''}
+GPS Coordinates: ${latitude ?? 'N/A'}, ${longitude ?? 'N/A'}
+View Live Location: https://maps.google.com/?q=${latitude ?? 0},${longitude ?? 0}
 
-Emergency Contact Information:
+The user $userName is in distress and has activated an SOS alert from the Sugenix App. 
 Please respond immediately! This is a critical health emergency.
 
 Sent from: Sugenix - Diabetes Management App
@@ -225,7 +226,9 @@ Sent from: Sugenix - Diabetes Management App
               recipientName: contactName,
               userName: userName,
               message: sosMessage,
-            ).timeout(const Duration(seconds: 8), onTimeout: () => false);
+              latitude: position?.latitude,
+              longitude: position?.longitude,
+            ).timeout(const Duration(seconds: 12), onTimeout: () => false);
 
             notificationResults.add({
               'contact': contactName,
@@ -288,23 +291,22 @@ Sent from: Sugenix - Diabetes Management App
     int limit = 10,
   }) async {
     try {
-      if (_auth.currentUser == null) return [];
-
-      final snapshot = await _firestore
+      final userId = _auth.currentUser!.uid;
+      QuerySnapshot snapshot = await _firestore
           .collection('sos_alerts')
-          .where('userId', isEqualTo: _auth.currentUser!.uid)
+          .where('userId', isEqualTo: userId)
           .limit(limit * 2) // Get more to sort
           .get();
 
       final alerts = snapshot.docs.map((doc) {
-        final data = doc.data();
+        final data = doc.data() as Map<String, dynamic>?;
         return {
           'id': doc.id,
-          'timestamp': data['timestamp'],
-          'status': data['status'],
-          'location': data['location'],
-          'contactsNotified': data['emergencyContactsCount'],
-          'glucoseReadings': data['glucoseReadings'],
+          'timestamp': data?['timestamp'],
+          'status': data?['status'],
+          'location': data?['location'],
+          'contactsNotified': data?['emergencyContactsCount'],
+          'glucoseReadings': data?['glucoseReadings'],
         };
       }).toList();
 

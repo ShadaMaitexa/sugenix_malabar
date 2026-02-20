@@ -98,4 +98,24 @@ class ChatService {
       await doc.reference.update({'read': true});
     }
   }
+
+  // Get list of active chats for a user
+  Stream<List<Map<String, dynamic>>> getRecentChats() {
+    if (_auth.currentUser == null) return Stream.value([]);
+
+    final userId = _auth.currentUser!.uid;
+
+    return _firestore
+        .collection('chats')
+        .where('participants', arrayContains: userId)
+        .orderBy('updatedAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+    });
+  }
 }

@@ -58,7 +58,8 @@ class LanguageService {
       'password_min_length': 'Password must be at least 6 characters',
       'signup_failed': 'Signup failed',
       'login_failed': 'Login failed',
-      'account_pending': 'Your account is pending admin approval. Please wait for approval before logging in.',
+      'account_pending':
+          'Your account is pending admin approval. Please wait for approval before logging in.',
       // Home Screen
       'welcome_back_comma': 'Welcome back,',
       'current_glucose_level': 'Current Glucose Level',
@@ -96,7 +97,8 @@ class LanguageService {
       'recent_orders_section': 'Recent Medicine Orders',
       'no_recent_orders': 'No orders yet. Explore the e-pharmacy store.',
       'latest_medical_records': 'Latest Medical Records',
-      'no_medical_records': 'No records found. Upload prescriptions or reports.',
+      'no_medical_records':
+          'No records found. Upload prescriptions or reports.',
       'language_settings': 'Language Preferences',
       'view_all': 'View All',
       // Role specific quick actions
@@ -162,19 +164,24 @@ class LanguageService {
       'password_changed_successfully': 'Password changed successfully',
       'failed_to_change_password': 'Failed to change password',
       'current_password_incorrect': 'Current password is incorrect',
-      'new_password_too_weak': 'New password is too weak. Please use a stronger password',
+      'new_password_too_weak':
+          'New password is too weak. Please use a stronger password',
       'please_login_again': 'Please login again to change password',
       'please_enter_current_password': 'Please enter current password',
       'please_enter_new_password': 'Please enter new password',
       'new_passwords_no_match': 'New passwords do not match',
-      'new_password_different': 'New password must be different from current password',
-      'are_you_sure_clear_cache': 'Are you sure you want to clear all cached data? This will not delete your account data.',
+      'new_password_different':
+          'New password must be different from current password',
+      'are_you_sure_clear_cache':
+          'Are you sure you want to clear all cached data? This will not delete your account data.',
       // Favorites
       'favourite_doctors': 'Favourite Doctors',
       'no_favourites_yet': 'No favourites yet',
       // Calendar
       'calendar': 'Calendar',
       'calendar_screen_coming_soon': 'Calendar Screen\nComing Soon!',
+      'chats': 'Chats',
+      'messages': 'Messages',
     },
     'ml': {
       'app_name': 'സുജെനിക്സ്',
@@ -196,7 +203,8 @@ class LanguageService {
       'sign_in_title': 'സൈൻ ഇൻ',
       'welcome_back': 'വീണ്ടും സ്വാഗതം',
       'sign_in_to_continue': 'തുടരാൻ സൈൻ ഇൻ ചെയ്യുക',
-      'signup_journey': 'ബുദ്ധിപൂർവ്വമായ പ്രമേഹ പരിചരണത്തിലേക്കുള്ള നിങ്ങളുടെ യാത്ര ഇവിടെ ആരംഭിക്കുന്നു',
+      'signup_journey':
+          'ബുദ്ധിപൂർവ്വമായ പ്രമേഹ പരിചരണത്തിലേക്കുള്ള നിങ്ങളുടെ യാത്ര ഇവിടെ ആരംഭിക്കുന്നു',
       're_enter_password': 'പാസ്‌വേഡ് വീണ്ടും നൽകുക',
       'agree_terms': 'ഞാൻ നിബന്ധനകളും വ്യവസ്ഥകളും അംഗീകരിക്കുന്നു',
       'have_account': 'അക്കൗണ്ട് ഉണ്ടോ? ',
@@ -211,7 +219,8 @@ class LanguageService {
       'password_min_length': 'പാസ്‌വേഡ് കുറഞ്ഞത് 6 പ്രതീകങ്ങൾ ആയിരിക്കണം',
       'signup_failed': 'സൈൻ അപ്പ് പരാജയപ്പെട്ടു',
       'login_failed': 'ലോഗിൻ പരാജയപ്പെട്ടു',
-      'account_pending': 'നിങ്ങളുടെ അക്കൗണ്ട് അഡ്മിൻ അംഗീകാരത്തിനായി കാത്തിരിക്കുന്നു. ലോഗിൻ ചെയ്യുന്നതിന് മുമ്പ് അംഗീകാരത്തിനായി കാത്തിരിക്കുക.',
+      'account_pending':
+          'നിങ്ങളുടെ അക്കൗണ്ട് അഡ്മിൻ അംഗീകാരത്തിനായി കാത്തിരിക്കുന്നു. ലോഗിൻ ചെയ്യുന്നതിന് മുമ്പ് അംഗീകാരത്തിനായി കാത്തിരിക്കുക.',
       // Home Screen
       'welcome_back_comma': 'വീണ്ടും സ്വാഗതം,',
       'current_glucose_level': 'നിലവിലെ ഗ്ലൂക്കോസ് നില',
@@ -272,7 +281,8 @@ class LanguageService {
       'use_fingerprint_faceid': 'ഫിംഗർപ്രിന്റ് അല്ലെങ്കിൽ ഫേസ് ID ഉപയോഗിക്കുക',
       'privacy_security': 'സ്വകാര്യതയും സുരക്ഷയും',
       'change_password': 'പാസ്‌വേഡ് മാറ്റുക',
-      'update_account_password': 'നിങ്ങളുടെ അക്കൗണ്ട് പാസ്‌വേഡ് അപ്ഡേറ്റ് ചെയ്യുക',
+      'update_account_password':
+          'നിങ്ങളുടെ അക്കൗണ്ട് പാസ്‌വേഡ് അപ്ഡേറ്റ് ചെയ്യുക',
       'privacy_policy': 'സ്വകാര്യതാ നയം',
       'view_privacy_policy': 'ഞങ്ങളുടെ സ്വകാര്യതാ നയം കാണുക',
       'terms_conditions': 'നിബന്ധനകളും വ്യവസ്ഥകളും',
@@ -304,10 +314,12 @@ class LanguageService {
       'inventory': 'ഇൻവെന്ററി',
       'appointments': 'അപ്പോയിന്റ്‌മെന്റുകൾ',
       // Common messages
-      'failed_to_update_favorite': 'പ്രിയങ്കരം അപ്ഡേറ്റ് ചെയ്യുന്നതിൽ പരാജയപ്പെട്ടു',
+      'failed_to_update_favorite':
+          'പ്രിയങ്കരം അപ്ഡേറ്റ് ചെയ്യുന്നതിൽ പരാജയപ്പെട്ടു',
       'cache_cleared_successfully': 'കാഷെ വിജയകരമായി മായ്ച്ചു',
       'failed_to_clear_cache': 'കാഷെ മായ്ക്കുന്നതിൽ പരാജയപ്പെട്ടു',
-      'data_backed_up_successfully': 'ഡാറ്റ വിജയകരമായി ക്ലൗഡിലേക്ക് ബാക്കപ്പ് ചെയ്തു',
+      'data_backed_up_successfully':
+          'ഡാറ്റ വിജയകരമായി ക്ലൗഡിലേക്ക് ബാക്കപ്പ് ചെയ്തു',
       'backup_failed': 'ബാക്കപ്പ് പരാജയപ്പെട്ടു',
       'please_login_to_backup': 'ഡാറ്റ ബാക്കപ്പ് ചെയ്യാൻ ദയവായി ലോഗിൻ ചെയ്യുക',
       'biometric_login_enabled': 'ബയോമെട്രിക് ലോഗിൻ പ്രവർത്തനക്ഷമമാക്കി',
@@ -315,19 +327,24 @@ class LanguageService {
       'password_changed_successfully': 'പാസ്‌വേഡ് വിജയകരമായി മാറ്റി',
       'failed_to_change_password': 'പാസ്‌വേഡ് മാറ്റുന്നതിൽ പരാജയപ്പെട്ടു',
       'current_password_incorrect': 'നിലവിലെ പാസ്‌വേഡ് തെറ്റാണ്',
-      'new_password_too_weak': 'പുതിയ പാസ്‌വേഡ് വളരെ ദുർബലമാണ്. ദയവായി ശക്തമായ പാസ്‌വേഡ് ഉപയോഗിക്കുക',
+      'new_password_too_weak':
+          'പുതിയ പാസ്‌വേഡ് വളരെ ദുർബലമാണ്. ദയവായി ശക്തമായ പാസ്‌വേഡ് ഉപയോഗിക്കുക',
       'please_login_again': 'പാസ്‌വേഡ് മാറ്റാൻ ദയവായി വീണ്ടും ലോഗിൻ ചെയ്യുക',
       'please_enter_current_password': 'ദയവായി നിലവിലെ പാസ്‌വേഡ് നൽകുക',
       'please_enter_new_password': 'ദയവായി പുതിയ പാസ്‌വേഡ് നൽകുക',
       'new_passwords_no_match': 'പുതിയ പാസ്‌വേഡുകൾ പൊരുത്തപ്പെടുന്നില്ല',
-      'new_password_different': 'പുതിയ പാസ്‌വേഡ് നിലവിലെ പാസ്‌വേഡിൽ നിന്ന് വ്യത്യസ്തമായിരിക്കണം',
-      'are_you_sure_clear_cache': 'നിങ്ങൾക്ക് എല്ലാ കാഷ് ചെയ്ത ഡാറ്റയും മായ്ക്കണമെന്ന് ഉറപ്പാണോ? ഇത് നിങ്ങളുടെ അക്കൗണ്ട് ഡാറ്റ ഇല്ലാതാക്കില്ല.',
+      'new_password_different':
+          'പുതിയ പാസ്‌വേഡ് നിലവിലെ പാസ്‌വേഡിൽ നിന്ന് വ്യത്യസ്തമായിരിക്കണം',
+      'are_you_sure_clear_cache':
+          'നിങ്ങൾക്ക് എല്ലാ കാഷ് ചെയ്ത ഡാറ്റയും മായ്ക്കണമെന്ന് ഉറപ്പാണോ? ഇത് നിങ്ങളുടെ അക്കൗണ്ട് ഡാറ്റ ഇല്ലാതാക്കില്ല.',
       // Favorites
       'favourite_doctors': 'പ്രിയങ്കര ഡോക്ടർമാർ',
       'no_favourites_yet': 'ഇതുവരെ പ്രിയങ്കരങ്ങൾ ഇല്ല',
       // Calendar
       'calendar': 'കലണ്ടർ',
       'calendar_screen_coming_soon': 'കലണ്ടർ സ്ക്രീൻ\nഉടൻ വരുന്നു!',
+      'chats': 'ചാറ്റുകൾ',
+      'messages': 'സന്ദേശങ്ങൾ',
     },
     'hi': {
       'app_name': 'सुजेनिक्स',
@@ -349,7 +366,8 @@ class LanguageService {
       'sign_in_title': 'साइन इन',
       'welcome_back': 'वापसी पर स्वागत है',
       'sign_in_to_continue': 'जारी रखने के लिए साइन इन करें',
-      'signup_journey': 'स्मार्ट मधुमेह देखभाल की आपकी यात्रा यहाँ शुरू होती है',
+      'signup_journey':
+          'स्मार्ट मधुमेह देखभाल की आपकी यात्रा यहाँ शुरू होती है',
       're_enter_password': 'पासवर्ड फिर से दर्ज करें',
       'agree_terms': 'मैं नियम और शर्तों से सहमत हूं',
       'have_account': 'क्या आपके पास खाता है? ',
@@ -364,7 +382,8 @@ class LanguageService {
       'password_min_length': 'पासवर्ड कम से कम 6 अक्षर का होना चाहिए',
       'signup_failed': 'साइन अप विफल',
       'login_failed': 'लॉगिन विफल',
-      'account_pending': 'आपका खाता व्यवस्थापक अनुमोदन के लिए लंबित है। लॉगिन करने से पहले कृपया अनुमोदन की प्रतीक्षा करें।',
+      'account_pending':
+          'आपका खाता व्यवस्थापक अनुमोदन के लिए लंबित है। लॉगिन करने से पहले कृपया अनुमोदन की प्रतीक्षा करें।',
       // Home Screen
       'welcome_back_comma': 'वापसी पर स्वागत है,',
       'current_glucose_level': 'वर्तमान ग्लूकोज स्तर',
@@ -468,19 +487,23 @@ class LanguageService {
       'password_changed_successfully': 'पासवर्ड सफलतापूर्वक बदल गया',
       'failed_to_change_password': 'पासवर्ड बदलने में विफल',
       'current_password_incorrect': 'वर्तमान पासवर्ड गलत है',
-      'new_password_too_weak': 'नया पासवर्ड बहुत कमजोर है। कृपया एक मजबूत पासवर्ड का उपयोग करें',
+      'new_password_too_weak':
+          'नया पासवर्ड बहुत कमजोर है। कृपया एक मजबूत पासवर्ड का उपयोग करें',
       'please_login_again': 'पासवर्ड बदलने के लिए कृपया फिर से लॉगिन करें',
       'please_enter_current_password': 'कृपया वर्तमान पासवर्ड दर्ज करें',
       'please_enter_new_password': 'कृपया नया पासवर्ड दर्ज करें',
       'new_passwords_no_match': 'नए पासवर्ड मेल नहीं खाते',
       'new_password_different': 'नया पासवर्ड वर्तमान पासवर्ड से अलग होना चाहिए',
-      'are_you_sure_clear_cache': 'क्या आप वाकई सभी कैश किए गए डेटा को साफ़ करना चाहते हैं? यह आपका खाता डेटा हटाएगा नहीं।',
+      'are_you_sure_clear_cache':
+          'क्या आप वाकई सभी कैश किए गए डेटा को साफ़ करना चाहते हैं? यह आपका खाता डेटा हटाएगा नहीं।',
       // Favorites
       'favourite_doctors': 'पसंदीदा डॉक्टर',
       'no_favourites_yet': 'अभी तक कोई पसंदीदा नहीं',
       // Calendar
       'calendar': 'कैलेंडर',
       'calendar_screen_coming_soon': 'कैलेंडर स्क्रीन\nजल्द ही आ रहा है!',
+      'chats': 'चैट',
+      'messages': 'संदेश',
     },
   };
 
