@@ -291,16 +291,13 @@ class AppointmentService {
       String doctorId, DateTime date) async {
     try {
       // Optimized: Get only appointments for this doctor on the specific day
-      final dayStart = DateTime(date.year, date.month, date.day);
-      final dayEnd = dayStart.add(const Duration(days: 1));
-
       final appointments = await _firestore
           .collection('appointments')
           .where('doctorId', isEqualTo: doctorId)
-          .where('dateTime',
-              isGreaterThanOrEqualTo: Timestamp.fromDate(dayStart))
-          .where('dateTime', isLessThan: Timestamp.fromDate(dayEnd))
           .get();
+
+      final dayStart = DateTime(date.year, date.month, date.day);
+      final dayEnd = dayStart.add(const Duration(days: 1));
 
       final bookedSlots = appointments.docs
           .map((doc) {
@@ -315,6 +312,9 @@ class AppointmentService {
             final timestamp = data['dateTime'] as Timestamp?;
             if (timestamp != null) {
               final dt = timestamp.toDate();
+              // Check if it falls within the selected day
+              if (dt.isBefore(dayStart) || dt.isAfter(dayEnd)) return null;
+
               return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
             }
             return null;

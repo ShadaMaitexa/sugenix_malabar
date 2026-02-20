@@ -80,13 +80,14 @@ Sugenix Team''';
           'user_id': _publicKey,
           'template_params': {
             'to_email': recipientEmail,
+            'name': recipientName, // Matches {{name}} in your screenshot
+            'email': 'support@sugenix.app', // Matches {{email}} in Reply-To
             'to_name': recipientName,
-            'subject': subject,
+            'subject': subject, // Matches {{subject}} in your screenshot
+            'message': message, // Matches {{message}} in your screenshot
             'title': title,
-            'message': message,
             'app_name': 'Sugenix',
             'login_url': 'https://sugenix.app/login',
-            'support_email': 'support@sugenix.app',
           },
         }),
       );
@@ -158,12 +159,13 @@ We appreciate your interest in joining the Sugenix platform.'''
           'user_id': _publicKey,
           'template_params': {
             'to_email': recipientEmail,
+            'name': recipientName, // Matches {{name}} in your screenshot
+            'email': 'support@sugenix.app', // Matches {{email}} in Reply-To
             'to_name': recipientName,
-            'subject': subject,
+            'subject': subject, // Matches {{subject}} in your screenshot
+            'message': message, // Matches {{message}} in your screenshot
             'title': title,
-            'message': message,
             'app_name': 'Sugenix',
-            'support_email': 'support@sugenix.app',
           },
         }),
       );
@@ -214,12 +216,15 @@ We appreciate your interest in joining the Sugenix platform.'''
           'user_id': _publicKey,
           'template_params': {
             'to_email': recipientEmail,
+            'name': recipientName, // Matches {{name}} in your screenshot
+            'email': 'support@sugenix.app', // Matches {{email}} in Reply-To
             'to_name': recipientName,
-            'subject': subject,
+            'user_name': userName,
+            'from_name': userName,
+            'subject': subject, // Matches {{subject}} in your screenshot
             'title': title,
-            'message': message,
+            'message': message, // Matches {{message}} in your screenshot
             'app_name': 'Sugenix',
-            'support_email': 'support@sugenix.app',
           },
         }),
       );
@@ -230,18 +235,9 @@ We appreciate your interest in joining the Sugenix platform.'''
       } else {
         final errorBody = response.body;
         print('❌ EmailJS SOS Error: ${response.statusCode} - $errorBody');
-        print('Payload sent to EmailJS: ${jsonEncode({
-              'service_id': _serviceId,
-              'template_id': _templateId,
-              'user_id': _publicKey,
-              'template_params': {
-                'to_email': recipientEmail,
-                'to_name': recipientName,
-                'subject': subject,
-                'title': title,
-                'message': message,
-              }
-            })}');
+        // Additional logging for debugging
+        print(
+            'Payload was sent to EmailJS with ServiceID: $_serviceId, TemplateID: $_templateId');
         return false;
       }
     } catch (e) {

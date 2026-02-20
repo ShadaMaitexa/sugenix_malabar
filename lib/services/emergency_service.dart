@@ -126,17 +126,12 @@ class EmergencyService {
           ? 'Location: ${position.latitude}, ${position.longitude}'
           : 'Location: Unable to determine';
 
-      String glucoseText = glucoseReadings.isNotEmpty
-          ? 'Recent glucose readings: ${glucoseReadings.map((r) => '${r['value']} mg/dL').join(', ')}'
-          : 'No recent glucose readings available';
-
       String message = '''
 🚨 EMERGENCY ALERT from Sugenix App 🚨
 
 ${customMessage ?? 'User has activated emergency SOS'}
 
 $locationText
-$glucoseText
 
 Please check on the user immediately!
 ''';

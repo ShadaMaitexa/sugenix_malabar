@@ -22,29 +22,11 @@ class SOSAlertService {
     String message = '''🚨 SOS EMERGENCY ALERT 🚨
 
 User: $userName
-Email: $userEmail
-Alert Type: Medical Emergency - Diabetic Crisis
+Alert Type: Medical Emergency
 
 Location Details:
 ${address != null ? 'Address: $address' : ''}
 ${latitude != null && longitude != null ? 'GPS Coordinates: $latitude, $longitude\nView Location: https://maps.google.com/?q=$latitude,$longitude' : 'Location: Not available'}
-
-Recent Glucose Readings:
-''';
-
-    if (recentReadings.isNotEmpty) {
-      for (int i = 0; i < recentReadings.length && i < 3; i++) {
-        final reading = recentReadings[i];
-        final value = reading['value'] ?? 'N/A';
-        final type = reading['type'] ?? 'Unknown';
-        final timestamp = reading['timestamp'] ?? 'Unknown time';
-        message += '\n• $value mg/dL ($type) - $timestamp';
-      }
-    } else {
-      message += '\nNo recent readings available';
-    }
-
-    message += '''
 
 Emergency Contact Information:
 Please respond immediately! This is a critical health emergency.
