@@ -2,19 +2,30 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class RevenueService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  
+
   // Platform fee percentage (10% of consultation fee)
   static const double platformFeePercentage = 0.10;
   static const double minimumPlatformFee = 10.0; // Minimum ₹10 platform fee
 
   // Calculate fees for an appointment
   static Map<String, double> calculateFees(double consultationFee) {
+    if (consultationFee <= 0) {
+      return {
+        'totalFee': 0.0,
+        'consultationFee': 0.0,
+        'platformFee': 0.0,
+        'doctorFee': 0.0,
+      };
+    }
+
     final platformFee = (consultationFee * platformFeePercentage).clamp(
       minimumPlatformFee,
       consultationFee * 0.15, // Max 15%
     );
-    final doctorFee = consultationFee - platformFee;
-    final totalFee = consultationFee + platformFee; // Total customer pays = consultation fee + platform fee
+
+    final doctorFee = consultationFee; // Doctor gets their full fee
+    final totalFee = consultationFee +
+        platformFee; // Total customer pays = consultation fee + platform fee
 
     return {
       'totalFee': totalFee,
@@ -36,7 +47,7 @@ class RevenueService {
   }) async {
     try {
       final fees = calculateFees(consultationFee);
-      
+
       // Record admin revenue (platform fee)
       await _firestore.collection('revenue').add({
         'type': 'platform_fee',
@@ -71,7 +82,7 @@ class RevenueService {
 
       // Update admin total revenue
       await _updateAdminRevenue(platformFeeAmount);
-      
+
       // Update doctor total revenue
       await _updateDoctorRevenue(doctorId, doctorFeeAmount);
     } catch (e) {
@@ -82,9 +93,10 @@ class RevenueService {
   // Update admin total revenue
   Future<void> _updateAdminRevenue(double amount) async {
     try {
-      final adminRevenueRef = _firestore.collection('admin_revenue').doc('total');
+      final adminRevenueRef =
+          _firestore.collection('admin_revenue').doc('total');
       final doc = await adminRevenueRef.get();
-      
+
       if (doc.exists) {
         await adminRevenueRef.update({
           'totalRevenue': FieldValue.increment(amount),
@@ -116,7 +128,8 @@ class RevenueService {
   // Get admin total revenue
   Future<double> getAdminRevenue() async {
     try {
-      final doc = await _firestore.collection('admin_revenue').doc('total').get();
+      final doc =
+          await _firestore.collection('admin_revenue').doc('total').get();
       if (doc.exists) {
         return (doc.data()?['totalRevenue'] as num?)?.toDouble() ?? 0.0;
       }
@@ -141,17 +154,19 @@ class RevenueService {
   }) {
     return _firestore
         .collection('revenue')
+        .where('type', whereIn: ['platform_fee', 'platform_fee_medicine'])
+        .orderBy('createdAt', descending: true)
         .limit(limit)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) {
-        final data = doc.data();
-        return {
-          'id': doc.id,
-          ...data,
-        };
-      }).toList();
-    });
+          return snapshot.docs.map((doc) {
+            final data = doc.data();
+            return {
+              'id': doc.id,
+              ...data,
+            };
+          }).toList();
+        });
   }
 
   // Get revenue statistics
@@ -160,23 +175,23 @@ class RevenueService {
     DateTime? endDate,
   }) async {
     try {
-      final snapshot = await _firestore.collection('revenue').get();
-      
+      final snapshot = await _firestore.collection('revenue').where('type',
+          whereIn: ['platform_fee', 'platform_fee_medicine']).get();
+
       double totalRevenue = 0.0;
       int transactionCount = snapshot.docs.length;
 
       for (var doc in snapshot.docs) {
-        final data = doc.data() as Map<String, dynamic>?;
-        if (data != null) {
-          final amount = (data['amount'] as num?)?.toDouble() ?? 0.0;
-          totalRevenue += amount;
-        }
+        final data = doc.data();
+        final amount = (data['amount'] as num?)?.toDouble() ?? 0.0;
+        totalRevenue += amount;
       }
 
       return {
         'totalRevenue': totalRevenue,
         'transactionCount': transactionCount,
-        'averageTransaction': transactionCount > 0 ? totalRevenue / transactionCount : 0.0,
+        'averageTransaction':
+            transactionCount > 0 ? totalRevenue / transactionCount : 0.0,
       };
     } catch (e) {
       return {
@@ -239,4 +254,3 @@ class RevenueService {
     }
   }
 }
-
