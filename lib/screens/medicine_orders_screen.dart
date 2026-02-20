@@ -218,11 +218,7 @@ class _MedicineOrdersScreenState extends State<MedicineOrdersScreen> {
         "icon": Icons.shopping_cart,
         "color": Colors.blue,
       },
-      {
-        "title": "Medicine Catalog",
-        "icon": Icons.menu_book,
-        "color": Colors.teal,
-      },
+      
       {
         "title": "Prescription Upload",
         "icon": Icons.description,
@@ -311,7 +307,7 @@ class _MedicineOrdersScreenState extends State<MedicineOrdersScreen> {
         );
         break;
       case "Buy Medicines":
-      case "Medicine Catalog":
+     
       case "Order medicine online":
         Navigator.push(context,
             MaterialPageRoute(builder: (_) => const MedicineCatalogScreen()));
