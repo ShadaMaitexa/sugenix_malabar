@@ -3,9 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class RevenueService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Platform fee percentage (10% of consultation fee)
-  static const double platformFeePercentage = 0.10;
-  static const double minimumPlatformFee = 10.0; // Minimum ₹10 platform fee
+  // Platform fee is fixed at ₹30
+  static const double fixedPlatformFee = 30.0;
 
   // Calculate fees for an appointment
   static Map<String, double> calculateFees(double consultationFee) {
@@ -18,11 +17,7 @@ class RevenueService {
       };
     }
 
-    final platformFee = (consultationFee * platformFeePercentage).clamp(
-      minimumPlatformFee,
-      consultationFee * 0.15, // Max 15%
-    );
-
+    final platformFee = fixedPlatformFee;
     final doctorFee = consultationFee; // Doctor gets their full fee
     final totalFee = consultationFee +
         platformFee; // Total customer pays = consultation fee + platform fee
@@ -40,51 +35,35 @@ class RevenueService {
     required String appointmentId,
     required String doctorId,
     required String patientId,
+    required String patientName,
     required double consultationFee,
     required double platformFee,
     required double doctorFee,
     String? paymentMethod,
   }) async {
     try {
-      final fees = calculateFees(consultationFee);
-
       // Record admin revenue (platform fee)
       await _firestore.collection('revenue').add({
         'type': 'platform_fee',
+        'revenueType': 'Appointment',
         'appointmentId': appointmentId,
         'doctorId': doctorId,
-        'patientId': patientId,
-        'amount': fees['platformFee'],
+        'userId': patientId,
+        'userName': patientName,
+        'amount': platformFee,
         'consultationFee': consultationFee,
-        'platformFee': fees['platformFee'],
-        'doctorFee': fees['doctorFee'],
-        'paymentMethod': paymentMethod ?? 'online',
-        'status': 'completed',
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-
-      // Record doctor revenue (consultation fee - platform fee)
-      final doctorFeeAmount = fees['doctorFee'] ?? 0.0;
-      final platformFeeAmount = fees['platformFee'] ?? 0.0;
-      await _firestore.collection('revenue').add({
-        'type': 'doctor_fee',
-        'appointmentId': appointmentId,
-        'doctorId': doctorId,
-        'patientId': patientId,
-        'amount': doctorFeeAmount,
-        'consultationFee': consultationFee,
-        'platformFee': platformFeeAmount,
-        'doctorFee': doctorFeeAmount,
+        'platformFee': platformFee,
+        'doctorFee': doctorFee,
         'paymentMethod': paymentMethod ?? 'online',
         'status': 'completed',
         'createdAt': FieldValue.serverTimestamp(),
       });
 
       // Update admin total revenue
-      await _updateAdminRevenue(platformFeeAmount);
+      await _updateAdminRevenue(platformFee);
 
       // Update doctor total revenue
-      await _updateDoctorRevenue(doctorId, doctorFeeAmount);
+      await _updateDoctorRevenue(doctorId, doctorFee);
     } catch (e) {
       throw Exception('Failed to record revenue: ${e.toString()}');
     }
@@ -155,17 +134,26 @@ class RevenueService {
     return _firestore
         .collection('revenue')
         .where('type', whereIn: ['platform_fee', 'platform_fee_medicine'])
-        .orderBy('createdAt', descending: true)
         .limit(limit)
         .snapshots()
         .map((snapshot) {
-          return snapshot.docs.map((doc) {
+          final txns = snapshot.docs.map((doc) {
             final data = doc.data();
             return {
               'id': doc.id,
               ...data,
             };
           }).toList();
+
+          // Sort client-side by createdAt descending
+          txns.sort((a, b) {
+            final aTime = a['createdAt'] as Timestamp?;
+            final bTime = b['createdAt'] as Timestamp?;
+            if (aTime == null || bTime == null) return 0;
+            return bTime.compareTo(aTime);
+          });
+
+          return txns;
         });
   }
 
@@ -207,6 +195,7 @@ class RevenueService {
     required String orderId,
     required String? pharmacyId,
     required String? userId,
+    required String? userName,
     required double subtotal,
     required double platformFee,
     required double pharmacyAmount,
@@ -217,9 +206,11 @@ class RevenueService {
       // Record admin revenue (platform fee from medicine orders)
       await _firestore.collection('revenue').add({
         'type': 'platform_fee_medicine',
+        'revenueType': 'Medicine Purchase',
         'orderId': orderId,
         'pharmacyId': pharmacyId,
         'userId': userId,
+        'userName': userName ?? 'Guest Customer',
         'amount': platformFee,
         'subtotal': subtotal,
         'platformFee': platformFee,

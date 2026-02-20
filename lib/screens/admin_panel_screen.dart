@@ -670,6 +670,23 @@ class _RevenueTab extends StatelessWidget {
           StreamBuilder<List<Map<String, dynamic>>>(
             stream: revenueService.getRevenueTransactions(limit: 20),
             builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(40),
+                    child: Column(
+                      children: [
+                        const Icon(Icons.error_outline,
+                            color: Colors.red, size: 48),
+                        const SizedBox(height: 16),
+                        Text('Error loading transactions: ${snapshot.error}',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: Colors.red)),
+                      ],
+                    ),
+                  ),
+                );
+              }
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
               }
@@ -678,9 +695,19 @@ class _RevenueTab extends StatelessWidget {
                 return const Center(
                   child: Padding(
                     padding: EdgeInsets.all(40),
-                    child: Text(
-                      'No revenue transactions yet',
-                      style: TextStyle(color: Colors.grey),
+                    child: Column(
+                      children: [
+                        Icon(Icons.receipt_long_outlined,
+                            size: 64, color: Colors.grey),
+                        SizedBox(height: 16),
+                        Text(
+                          'No revenue transactions yet',
+                          style: TextStyle(
+                              color: Colors.grey,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500),
+                        ),
+                      ],
                     ),
                   ),
                 );
@@ -694,6 +721,21 @@ class _RevenueTab extends StatelessWidget {
                   final txn = transactions[index];
                   final amount = (txn['amount'] as num?)?.toDouble() ?? 0.0;
                   final createdAt = txn['createdAt'] as Timestamp?;
+
+                  // Infer revenue type for backward compatibility
+                  String revenueType = txn['revenueType'] as String? ?? '';
+                  if (revenueType.isEmpty) {
+                    final type = txn['type'] as String? ?? '';
+                    if (type == 'platform_fee') {
+                      revenueType = 'Appointment';
+                    } else if (type == 'platform_fee_medicine') {
+                      revenueType = 'Medicine Purchase';
+                    } else {
+                      revenueType = 'Other';
+                    }
+                  }
+
+                  final userName = txn['userName'] as String? ?? 'Customer';
 
                   return Container(
                     padding: const EdgeInsets.all(16),
@@ -713,12 +755,14 @@ class _RevenueTab extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.1),
+                            color: const Color(0xFF0C4556).withOpacity(0.1),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: const Icon(
-                            Icons.account_balance_wallet,
-                            color: Colors.green,
+                          child: Icon(
+                            revenueType.contains('Appointment')
+                                ? Icons.calendar_today
+                                : Icons.shopping_bag_outlined,
+                            color: const Color(0xFF0C4556),
                           ),
                         ),
                         const SizedBox(width: 16),
@@ -727,11 +771,39 @@ class _RevenueTab extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Platform Fee',
+                                revenueType,
                                 style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
+                                  fontWeight: FontWeight.bold,
                                   color: Color(0xFF0C4556),
+                                  fontSize: 14,
                                 ),
+                              ),
+                              const SizedBox(height: 2),
+                              // Fetch name from users collection
+                              FutureBuilder<DocumentSnapshot>(
+                                future: FirebaseFirestore.instance
+                                    .collection('users')
+                                    .doc(txn['userId'] ?? txn['patientId'])
+                                    .get(),
+                                builder: (context, userSnap) {
+                                  String displayName = userName;
+                                  if (userSnap.hasData &&
+                                      userSnap.data!.exists) {
+                                    final userData = userSnap.data!.data()
+                                        as Map<String, dynamic>?;
+                                    displayName = userData?['name'] ??
+                                        userData?['fullName'] ??
+                                        userName;
+                                  }
+                                  return Text(
+                                    'User: $displayName',
+                                    style: TextStyle(
+                                      color: Colors.grey[800],
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  );
+                                },
                               ),
                               const SizedBox(height: 4),
                               Text(
@@ -741,18 +813,18 @@ class _RevenueTab extends StatelessWidget {
                                     : 'Date not available',
                                 style: const TextStyle(
                                   color: Colors.grey,
-                                  fontSize: 12,
+                                  fontSize: 11,
                                 ),
                               ),
                             ],
                           ),
                         ),
                         Text(
-                          '+₹${amount.toStringAsFixed(2)}',
+                          '₹${amount.toStringAsFixed(2)}',
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             color: Colors.green,
-                            fontSize: 16,
+                            fontSize: 18,
                           ),
                         ),
                       ],

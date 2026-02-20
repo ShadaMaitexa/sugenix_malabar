@@ -90,29 +90,8 @@ class PlatformSettingsService {
   // Calculate platform fee for a medicine order
   Future<Map<String, double>> calculatePlatformFee(double orderTotal) async {
     try {
-      final settings = await getPlatformFeeSettings();
-      final feeType = settings['feeType'] as String;
-      final feeValue = (settings['feeValue'] as num?)?.toDouble() ?? 5.0;
-      final minimumFee = (settings['minimumFee'] as num?)?.toDouble() ?? 0.0;
-      final maximumFee = (settings['maximumFee'] as num?)?.toDouble();
-
-      double platformFee = 0.0;
-
-      if (feeType == 'percentage') {
-        platformFee = (orderTotal * feeValue / 100);
-      } else {
-        // Fixed fee
-        platformFee = feeValue;
-      }
-
-      // Apply minimum and maximum constraints
-      if (minimumFee > 0 && platformFee < minimumFee) {
-        platformFee = minimumFee;
-      }
-      if (maximumFee != null && platformFee > maximumFee) {
-        platformFee = maximumFee;
-      }
-
+      // Platform fee is now a fixed ₹30
+      const platformFee = 30.0;
       final pharmacyAmount = orderTotal; // Pharmacy gets their full subtotal
       final totalAmount = orderTotal +
           platformFee; // Total customer pays = subtotal + platform fee
@@ -124,14 +103,12 @@ class PlatformSettingsService {
         'totalAmount': totalAmount,
       };
     } catch (e) {
-      // Fallback to default calculation
-      final platformFee = (orderTotal * 0.05).clamp(0.0, orderTotal);
+      // Fallback
       return {
         'orderTotal': orderTotal,
-        'platformFee': platformFee,
+        'platformFee': 30.0,
         'pharmacyAmount': orderTotal,
-        'totalAmount': orderTotal +
-            platformFee, // Total customer pays = subtotal + platform fee
+        'totalAmount': orderTotal + 30.0,
       };
     }
   }

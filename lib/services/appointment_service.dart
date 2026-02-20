@@ -118,12 +118,14 @@ class AppointmentService {
       final consultationFee = (data['fee'] as num?)?.toDouble() ?? 0.0;
       final doctorId = data['doctorId'] as String;
       final patientId = data['patientId'] as String;
+      final patientName = data['patientName'] as String? ?? 'Unknown Patient';
 
       // Record revenue
       await _revenueService.recordRevenue(
         appointmentId: appointmentId,
         doctorId: doctorId,
         patientId: patientId,
+        patientName: patientName,
         consultationFee: consultationFee,
         platformFee: (data['platformFee'] as num?)?.toDouble() ?? 0.0,
         doctorFee: (data['doctorFee'] as num?)?.toDouble() ?? 0.0,

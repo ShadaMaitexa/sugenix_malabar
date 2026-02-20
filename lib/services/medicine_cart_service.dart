@@ -31,8 +31,8 @@ class MedicineCartService {
     if (cartCol != null) {
       // Authenticated user - stream from Firestore
       return cartCol.snapshots().map(
-        (snap) => snap.docs.map((d) => {'id': d.id, ...d.data()}).toList(),
-      );
+            (snap) => snap.docs.map((d) => {'id': d.id, ...d.data()}).toList(),
+          );
     } else {
       // Guest user - stream from local storage
       return Stream.periodic(const Duration(milliseconds: 500), (_) async {
@@ -63,7 +63,7 @@ class MedicineCartService {
       final prefs = await SharedPreferences.getInstance();
       final cartJson = prefs.getString(_guestCartKey);
       if (cartJson == null) return [];
-      
+
       // Parse JSON string to list
       try {
         final List<dynamic> decoded = jsonDecode(cartJson);
@@ -104,16 +104,17 @@ class MedicineCartService {
       final prefs = await SharedPreferences.getInstance();
       final cartJson = prefs.getString(_guestCartKey);
       List<Map<String, dynamic>> items = [];
-      
+
       if (cartJson != null) {
         try {
           final List<dynamic> decoded = jsonDecode(cartJson);
-          items = decoded.map((item) => Map<String, dynamic>.from(item)).toList();
+          items =
+              decoded.map((item) => Map<String, dynamic>.from(item)).toList();
         } catch (e) {
           items = [];
         }
       }
-      
+
       // Add or update item
       bool found = false;
       for (var item in items) {
@@ -123,7 +124,7 @@ class MedicineCartService {
           break;
         }
       }
-      
+
       if (!found) {
         items.add({
           'medicineId': medicineId,
@@ -134,7 +135,7 @@ class MedicineCartService {
           'id': medicineId,
         });
       }
-      
+
       // Save to local storage as JSON
       await prefs.setString(_guestCartKey, jsonEncode(items));
     }
@@ -157,18 +158,19 @@ class MedicineCartService {
         final prefs = await SharedPreferences.getInstance();
         final cartJson = prefs.getString(_guestCartKey);
         if (cartJson == null) return;
-        
+
         try {
           final List<dynamic> decoded = jsonDecode(cartJson);
-          List<Map<String, dynamic>> items = decoded.map((item) => Map<String, dynamic>.from(item)).toList();
-          
+          List<Map<String, dynamic>> items =
+              decoded.map((item) => Map<String, dynamic>.from(item)).toList();
+
           for (var item in items) {
             if (item['medicineId'] == medicineId) {
               item['quantity'] = quantity;
               break;
             }
           }
-          
+
           await prefs.setString(_guestCartKey, jsonEncode(items));
         } catch (e) {
           // Handle error
@@ -187,10 +189,11 @@ class MedicineCartService {
       final prefs = await SharedPreferences.getInstance();
       final cartJson = prefs.getString(_guestCartKey);
       if (cartJson == null) return;
-      
+
       try {
         final List<dynamic> decoded = jsonDecode(cartJson);
-        List<Map<String, dynamic>> items = decoded.map((item) => Map<String, dynamic>.from(item)).toList();
+        List<Map<String, dynamic>> items =
+            decoded.map((item) => Map<String, dynamic>.from(item)).toList();
         items.removeWhere((item) => item['medicineId'] == medicineId);
         await prefs.setString(_guestCartKey, jsonEncode(items));
       } catch (e) {
@@ -250,7 +253,8 @@ class MedicineCartService {
 
     if (pharmacyId == null) {
       for (final item in processedItems) {
-        final medId = (item['medicineId'] as String?) ?? (item['id'] as String?);
+        final medId =
+            (item['medicineId'] as String?) ?? (item['id'] as String?);
         if (medId == null || medId.isEmpty) continue;
         try {
           final medDoc = await _db.collection('medicines').doc(medId).get();
@@ -275,7 +279,8 @@ class MedicineCartService {
     }
 
     // Calculate platform fee
-    final feeCalculation = await _platformSettings.calculatePlatformFee(subtotal);
+    final feeCalculation =
+        await _platformSettings.calculatePlatformFee(subtotal);
     final platformFee = feeCalculation['platformFee'] ?? 0.0;
     final pharmacyAmount = feeCalculation['pharmacyAmount'] ?? subtotal;
     final total = feeCalculation['totalAmount'] ?? subtotal;
@@ -286,7 +291,9 @@ class MedicineCartService {
       'customerName': customerName,
       'customerEmail': customerEmail,
       'customerPhone': customerPhone,
-      'status': paymentMethod == 'Razorpay' && paymentId != null ? 'confirmed' : 'placed',
+      'status': paymentMethod == 'Razorpay' && paymentId != null
+          ? 'confirmed'
+          : 'placed',
       'subtotal': subtotal,
       'platformFee': platformFee,
       'pharmacyAmount': pharmacyAmount,
@@ -305,11 +312,12 @@ class MedicineCartService {
 
     final batch = _db.batch();
     final cartCol = _cartCol;
-    
+
     for (final item in processedItems) {
-      final itemRef = orderRef.collection('orderItems').doc(item['id'] as String);
+      final itemRef =
+          orderRef.collection('orderItems').doc(item['id'] as String);
       batch.set(itemRef, item);
-      
+
       // Remove from cart (if authenticated user)
       if (cartCol != null) {
         batch.delete(cartCol.doc(item['id'] as String));
@@ -328,6 +336,7 @@ class MedicineCartService {
         orderId: orderRef.id,
         pharmacyId: pharmacyId,
         userId: _uid,
+        userName: customerName,
         subtotal: subtotal,
         platformFee: platformFee,
         pharmacyAmount: pharmacyAmount,
