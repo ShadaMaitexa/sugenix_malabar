@@ -134,35 +134,55 @@ Sent from: Sugenix - Diabetes Management App
       // Get current location with proper permission handling
       Position? position;
       String? address;
+      String? locationError;
 
       try {
+        print('📍 Requesting location permission...');
         // Request location permission first
         final hasPermission =
             await PlatformLocationService.hasLocationPermission();
         if (!hasPermission) {
-          await PlatformLocationService.requestLocationPermission();
+          print('📍 Permission not granted, requesting...');
+          final granted = await PlatformLocationService.requestLocationPermission();
+          if (!granted) {
+            locationError = 'Location permission denied';
+            print('⚠️ Location permission denied');
+          }
         }
 
-        // Get current location with short timeout
-        position = await PlatformLocationService.getCurrentLocation();
+        if (locationError == null) {
+          print('📍 Fetching current location...');
+          // Get current location with timeout
+          position = await PlatformLocationService.getCurrentLocation()
+              .timeout(const Duration(seconds: 8), onTimeout: () {
+            print('⏱️ Location fetch timeout');
+            locationError = 'Location fetch timeout';
+            return null;
+          });
 
-        if (position != null) {
-          final pos = position;
-          try {
-            // Very short timeout for reverse geocoding to avoid blocking SOS
-            address = await PlatformLocationService.getAddressFromCoordinates(
-              pos.latitude,
-              pos.longitude,
-            ).timeout(const Duration(seconds: 2), onTimeout: () {
-              return 'Lat: ${pos.latitude.toStringAsFixed(4)}, Lng: ${pos.longitude.toStringAsFixed(4)}';
-            });
-          } catch (e) {
-            address =
-                'Lat: ${pos.latitude.toStringAsFixed(4)}, Lng: ${pos.longitude.toStringAsFixed(4)}';
+          if (position != null) {
+            print('✅ Location obtained: ${position.latitude}, ${position.longitude}');
+            final pos = position;
+            try {
+              // Very short timeout for reverse geocoding to avoid blocking SOS
+              address = await PlatformLocationService.getAddressFromCoordinates(
+                pos.latitude,
+                pos.longitude,
+              ).timeout(const Duration(seconds: 3), onTimeout: () {
+                return 'Lat: ${pos.latitude.toStringAsFixed(4)}, Lng: ${pos.longitude.toStringAsFixed(4)}';
+              });
+            } catch (e) {
+              address =
+                  'Lat: ${pos.latitude.toStringAsFixed(4)}, Lng: ${pos.longitude.toStringAsFixed(4)}';
+            }
+          } else {
+            locationError = locationError ?? 'Failed to get location';
+            print('❌ Location is null: $locationError');
           }
         }
       } catch (e) {
-        print('Location error (non-fatal for SOS): $e');
+        locationError = e.toString();
+        print('❌ Location error (non-fatal for SOS): $e');
       }
 
       // Get recent glucose readings
@@ -204,7 +224,7 @@ Sent from: Sugenix - Diabetes Management App
         recentReadings: glucoseReadings,
       );
 
-      // Store SOS alert in Firestore
+      // Store SOS alert in Firestore (even if location failed, we still create the alert)
       final alertDoc = await _firestore.collection('sos_alerts').add({
         'userId': userId,
         'userName': userName,
@@ -213,9 +233,10 @@ Sent from: Sugenix - Diabetes Management App
             ? {
                 'latitude': position.latitude,
                 'longitude': position.longitude,
-                'address': address,
+                'address': address ?? 'Location obtained but address unavailable',
               }
             : null,
+        'locationError': locationError,
         'glucoseReadings': glucoseReadings,
         'customMessage': customMessage,
         'status': 'active',
@@ -241,8 +262,11 @@ Sent from: Sugenix - Diabetes Management App
 
         print('📧 Sending SOS email to $contactName ($email)...');
         
+        String? emailError;
+        bool emailSuccess = false;
+        
         try {
-          final emailSuccess = await EmailJSService.sendSOSEmail(
+          final emailResult = await EmailJSService.sendSOSEmailWithError(
             recipientEmail: email,
             recipientName: contactName,
             userName: userName,
@@ -250,39 +274,39 @@ Sent from: Sugenix - Diabetes Management App
             latitude: position?.latitude,
             longitude: position?.longitude,
           ).timeout(const Duration(seconds: 15), onTimeout: () {
+            emailError = 'EmailJS request timeout (15s)';
             print('⏱️ EmailJS timeout for $email');
-            return false;
+            return {'success': false, 'error': emailError!};
           });
+
+          emailSuccess = emailResult['success'] == true;
+          emailError = emailResult['error'] as String?;
 
           if (emailSuccess) {
             print('✅ SOS email sent successfully to $email');
           } else {
-            print('❌ Failed to send SOS email to $email');
+            print('❌ Failed to send SOS email to $email: ${emailError ?? "Unknown error"}');
           }
-
-          notificationResults.add({
-            'contact': contactName,
-            'email': email,
-            'status': emailSuccess ? 'sent' : 'failed',
-            'timestamp': DateTime.now().toIso8601String(),
-          });
-
-          notificationStatus[email.replaceAll('.', '_')] = {
-            'name': contactName,
-            'status': emailSuccess ? 'sent' : 'failed',
-            'timestamp': FieldValue.serverTimestamp(),
-          };
         } catch (e, stackTrace) {
+          emailError = e.toString();
           print('❌ Exception sending SOS email to $email: $e');
           print('Stack trace: $stackTrace');
-          notificationResults.add({
-            'contact': contactName,
-            'email': email,
-            'status': 'failed',
-            'error': e.toString(),
-            'timestamp': DateTime.now().toIso8601String(),
-          });
         }
+
+        notificationResults.add({
+          'contact': contactName,
+          'email': email,
+          'status': emailSuccess ? 'sent' : 'failed',
+          'error': emailError,
+          'timestamp': DateTime.now().toIso8601String(),
+        });
+
+        notificationStatus[email.replaceAll('.', '_')] = {
+          'name': contactName,
+          'status': emailSuccess ? 'sent' : 'failed',
+          'error': emailError,
+          'timestamp': FieldValue.serverTimestamp(),
+        };
       }
 
       // Update alert with final status

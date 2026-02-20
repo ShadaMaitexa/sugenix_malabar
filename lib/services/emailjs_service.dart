@@ -196,7 +196,8 @@ We appreciate your interest in joining the Sugenix platform.'''
 
   /// Send Emergency SOS email to emergency contacts (uses same template as approval emails).
   /// Message includes current location; lat/long and map_url are also sent for template use.
-  static Future<bool> sendSOSEmail({
+  /// Returns a Map with 'success' bool and optional 'error' string for detailed error info.
+  static Future<Map<String, dynamic>> sendSOSEmailWithError({
     required String recipientEmail,
     required String recipientName,
     required String userName,
@@ -241,24 +242,71 @@ We appreciate your interest in joining the Sugenix platform.'''
 
       if (response.statusCode == 200) {
         print('✅ SOS email sent successfully to $recipientEmail');
-        return true;
+        return {'success': true};
       } else {
         final errorBody = response.body;
         print('❌ EmailJS SOS Error: ${response.statusCode}');
         print('Error Response: $errorBody');
         print('ServiceID: $_serviceId, TemplateID: $_templateId');
         print('Recipient: $recipientEmail');
-        // Check if it's a configuration error
-        if (response.statusCode == 400 || response.statusCode == 401) {
-          print(
-              '⚠️ EmailJS credentials may be incorrect. Please check service_id, template_id, and public_key.');
+        
+        // Try to parse error message from response
+        String errorMessage = 'HTTP ${response.statusCode}';
+        try {
+          final errorJson = jsonDecode(errorBody);
+          if (errorJson is Map && errorJson.containsKey('text')) {
+            errorMessage = errorJson['text'].toString();
+          } else if (errorJson is Map && errorJson.containsKey('message')) {
+            errorMessage = errorJson['message'].toString();
+          } else {
+            errorMessage = errorBody.isNotEmpty ? errorBody : 'Unknown error';
+          }
+        } catch (_) {
+          errorMessage = errorBody.isNotEmpty ? errorBody : 'Unknown error';
         }
-        return false;
+        
+        print('Parsed error: $errorMessage');
+        
+        // Check if it's a configuration error
+        if (response.statusCode == 400) {
+          errorMessage = 'Bad Request (400): Check template parameters and template_id. $errorMessage';
+          print('⚠️ EmailJS Bad Request (400) - Check template parameters and template_id');
+        } else if (response.statusCode == 401) {
+          errorMessage = 'Unauthorized (401): Check public_key (user_id). $errorMessage';
+          print('⚠️ EmailJS Unauthorized (401) - Check public_key (user_id)');
+        } else if (response.statusCode == 404) {
+          errorMessage = 'Not Found (404): Check service_id and template_id. $errorMessage';
+          print('⚠️ EmailJS Not Found (404) - Check service_id and template_id');
+        }
+        
+        return {'success': false, 'error': errorMessage};
       }
     } catch (e, stackTrace) {
       print('❌ EmailJS SOS Exception: $e');
       print('Stack trace: $stackTrace');
-      return false;
+      return {'success': false, 'error': e.toString()};
     }
+  }
+
+  /// Send Emergency SOS email to emergency contacts (uses same template as approval emails).
+  /// Message includes current location; lat/long and map_url are also sent for template use.
+  /// This is a convenience method that returns bool for backward compatibility.
+  static Future<bool> sendSOSEmail({
+    required String recipientEmail,
+    required String recipientName,
+    required String userName,
+    required String message,
+    double? latitude,
+    double? longitude,
+  }) async {
+    final result = await sendSOSEmailWithError(
+      recipientEmail: recipientEmail,
+      recipientName: recipientName,
+      userName: userName,
+      message: message,
+      latitude: latitude,
+      longitude: longitude,
+    );
+    return result['success'] == true;
   }
 }

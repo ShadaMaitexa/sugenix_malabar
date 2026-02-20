@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:sugenix/services/appointment_service.dart';
 import 'package:sugenix/services/auth_service.dart';
 import 'package:sugenix/services/revenue_service.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:sugenix/services/razorpay_service.dart';
 
 class DoctorDetailsScreen extends StatelessWidget {
@@ -370,6 +371,7 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
   bool _isLoading = false;
   List<String> _availableTimeSlots = [];
   String? _lastAppointmentId;
+  DateTime? _lastAppointmentDateTime;
   Map<String, dynamic>? _userProfile;
 
   @override
@@ -383,49 +385,48 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
   void _setupRazorpayCallbacks() {
     RazorpayService.initialize(
       onSuccessCallback: (dynamic response) async {
-        if (_lastAppointmentId != null) {
-          try {
-            await _appointmentService.processPayment(
-              appointmentId: _lastAppointmentId!,
-              paymentMethod: 'razorpay',
+        if (_lastAppointmentId == null) return;
+        try {
+          await _appointmentService.processPayment(
+            appointmentId: _lastAppointmentId!,
+            paymentMethod: 'razorpay',
+          );
+          if (!mounted) return;
+          setState(() => _isLoading = false);
+          // Razorpay closes its own checkout UI on success; show our dialog after a brief delay so transition is clean
+          await Future.delayed(const Duration(milliseconds: 400));
+          if (!mounted) return;
+          final dt = _lastAppointmentDateTime ??
+              DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
+          _showSuccessDialog(context, dt);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Appointment booked successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } catch (e) {
+          if (mounted) {
+            setState(() => _isLoading = false);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                    'Payment recorded but failed to update: ${e.toString()}'),
+                backgroundColor: Colors.orange,
+              ),
             );
-            if (mounted) {
-              setState(() {
-                _isLoading = false;
-              });
-              Navigator.pop(context); // Close payment dialog if open
-              _showSuccessDialog(context, _selectedDate);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Payment successful!'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            }
-          } catch (e) {
-            if (mounted) {
-              setState(() {
-                _isLoading = false;
-              });
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                      'Payment recorded but failed to update: ${e.toString()}'),
-                  backgroundColor: Colors.orange,
-                ),
-              );
-            }
           }
         }
       },
       onErrorCallback: (dynamic response) {
         if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
+          setState(() => _isLoading = false);
+          final message = response is PaymentFailureResponse
+              ? response.message
+              : 'Payment was cancelled or failed.';
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Payment failed: ${response.message}'),
+              content: Text('Payment failed: $message'),
               backgroundColor: Colors.red,
             ),
           );
@@ -1108,8 +1109,8 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
             ),
             const SizedBox(height: 20),
             const Text(
-              'Select Payment Method:',
-              style: TextStyle(fontWeight: FontWeight.w600),
+              'Pay with Razorpay (Test mode – no KYC required)',
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
             ),
             const SizedBox(height: 10),
             _buildPaymentOption(context, 'UPI / Wallet', 'razorpay',
@@ -1118,8 +1119,6 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
                 context, 'Credit/Debit Card', 'razorpay', Icons.credit_card),
             _buildPaymentOption(
                 context, 'Net Banking', 'razorpay', Icons.account_balance),
-            const Divider(),
-            _buildPaymentOption(context, 'Direct ', 'cod', Icons.money),
           ],
         ),
         actions: [
@@ -1167,79 +1166,42 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
   Future<void> _handlePaymentMethod(BuildContext context, String method) async {
     if (_lastAppointmentId == null) return;
 
-    Navigator.pop(context); // Close dialog
+    Navigator.pop(context); // Close payment dialog
 
-    if (method == 'cod') {
-      // Cash on Delivery - no Razorpay needed
-      setState(() {
-        _isLoading = true;
-      });
-      try {
-        await _appointmentService.processPayment(
-          appointmentId: _lastAppointmentId!,
-          paymentMethod: 'cod',
+    // Razorpay only (test key – no KYC required)
+    final consultationFee = widget.doctor.consultationFee;
+    final fees = RevenueService.calculateFees(consultationFee);
+    final totalFee = fees['totalFee']!;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await RazorpayService.openCheckout(
+        amount: totalFee,
+        name: _patientNameController.text.trim(),
+        email: _userProfile?['email'] ?? 'patient@sugenix.com',
+        phone: _mobileController.text.trim(),
+        description: 'Appointment with ${widget.doctor.name}',
+        notes: {
+          'appointmentId': _lastAppointmentId,
+          'doctorId': widget.doctor.id,
+          'doctorName': widget.doctor.name,
+        },
+      );
+      // On success: _setupRazorpayCallbacks shows "Booked successfully" dialog
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to open payment: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
         );
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-          _showSuccessDialog(context, _selectedDate);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Appointment booked! Pay on delivery.'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed: ${e.toString()}'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    } else {
-      // Online payment - Open Razorpay Checkout
-      final consultationFee = widget.doctor.consultationFee;
-      final fees = RevenueService.calculateFees(consultationFee);
-      final totalFee = fees['totalFee']!;
-
-      setState(() {
-        _isLoading = true;
-      });
-
-      try {
-        await RazorpayService.openCheckout(
-          amount: totalFee,
-          name: _patientNameController.text.trim(),
-          email: _userProfile?['email'] ?? 'patient@sugenix.com',
-          phone: _mobileController.text.trim(),
-          description: 'Appointment with ${widget.doctor.name}',
-          notes: {
-            'appointmentId': _lastAppointmentId,
-            'doctorId': widget.doctor.id,
-            'doctorName': widget.doctor.name,
-          },
-        );
-        // Payment result will be handled by callbacks in _setupRazorpayCallbacks
-      } catch (e) {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed to initiate payment: ${e.toString()}'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
       }
     }
   }
@@ -1340,11 +1302,18 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
         setState(() {
           _isLoading = false;
           _lastAppointmentId = appointmentId;
+          _lastAppointmentDateTime = appointmentDateTime;
         });
         if (widget.doctor.consultationFee > 0) {
           _showPaymentDialog(context, appointmentDateTime, appointmentId);
         } else {
           _showSuccessDialog(context, appointmentDateTime);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Appointment booked successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
         }
       }
     } catch (e) {
@@ -1375,13 +1344,27 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Colors.green, size: 28),
+            const SizedBox(width: 10),
+            const Text(
+              'Booked successfully',
+              style: TextStyle(
+                color: Color(0xFF0C4556),
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
+          ],
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(Icons.check_circle, color: Colors.green, size: 60),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
             Text(
-              "Appointment booked slot successfully",
+              "Your appointment has been booked successfully.",
               style: TextStyle(
                 fontSize: ResponsiveHelper.getResponsiveFontSize(
                   context,
