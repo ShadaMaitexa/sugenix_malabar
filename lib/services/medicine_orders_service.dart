@@ -222,7 +222,7 @@ class MedicineOrdersService {
     return _firestore
         .collection('orders')
         .where('userId', isEqualTo: userId)
-        .orderBy('createdAt', descending: true)
+       
         .snapshots()
         .map(
       (snapshot) {
@@ -293,7 +293,7 @@ class MedicineOrdersService {
     return _firestore
         .collection('prescriptions')
         .where('userId', isEqualTo: userId)
-        .orderBy('createdAt', descending: true)
+        
         .snapshots()
         .map(
       (snapshot) {
