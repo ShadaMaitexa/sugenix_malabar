@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:sugenix/services/medicine_cart_service.dart';
 import 'package:sugenix/services/razorpay_service.dart';
 import 'package:sugenix/services/auth_service.dart';
@@ -85,13 +86,14 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  void _handlePaymentSuccess(dynamic response) {
+  Future<void> _handlePaymentSuccess(dynamic response) async {
     setState(() {
       _processingPayment = false;
     });
-
-    // Complete the order with payment details
-    _completeOrder(
+    // Let Razorpay close its UI, then complete order and show success (same as appointment flow)
+    await Future.delayed(const Duration(milliseconds: 400));
+    if (!mounted) return;
+    await _completeOrder(
       paymentMethod: 'Razorpay',
       paymentId: response.paymentId,
       orderId: response.orderId,
@@ -104,9 +106,12 @@ class _CartScreenState extends State<CartScreen> {
     });
 
     if (mounted) {
+      final message = response is PaymentFailureResponse
+          ? response.message
+          : 'Payment was cancelled or failed.';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Payment failed: ${response.message}'),
+          content: Text('Payment failed: $message'),
           backgroundColor: Colors.red,
         ),
       );
@@ -121,6 +126,73 @@ class _CartScreenState extends State<CartScreen> {
         ),
       );
     }
+  }
+
+  void _showOrderSuccessDialog(String orderId) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Colors.green, size: 28),
+            const SizedBox(width: 10),
+            const Text(
+              'Order placed successfully',
+              style: TextStyle(
+                color: Color(0xFF0C4556),
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.check_circle, color: Colors.green, size: 56),
+            const SizedBox(height: 16),
+            const Text(
+              'Your order has been placed. You will receive updates on delivery.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Order ID: #$orderId',
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 16,
+                color: Color(0xFF0C4556),
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context); // Close dialog
+                  Navigator.pop(context); // Leave cart
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0C4556),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: const Text('Done', style: TextStyle(color: Colors.white)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Order placed successfully!'),
+        backgroundColor: Colors.green,
+      ),
+    );
   }
 
   Future<void> _completeOrder({
@@ -235,13 +307,11 @@ class _CartScreenState extends State<CartScreen> {
           _showSuccessAnimation = false;
         });
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content:
-                Text('Order placed successfully! Order ID: #$finalOrderId'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        // Razorpay success: show dialog then pop (same pattern as appointment)
+        if (mounted) {
+          _showOrderSuccessDialog(finalOrderId);
+        }
+        return;
       }
 
       Navigator.pop(context);
