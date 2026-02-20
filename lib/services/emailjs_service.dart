@@ -244,14 +244,20 @@ We appreciate your interest in joining the Sugenix platform.'''
         return true;
       } else {
         final errorBody = response.body;
-        print('❌ EmailJS SOS Error: ${response.statusCode} - $errorBody');
-        // Additional logging for debugging
-        print(
-            'Payload was sent to EmailJS with ServiceID: $_serviceId, TemplateID: $_templateId');
+        print('❌ EmailJS SOS Error: ${response.statusCode}');
+        print('Error Response: $errorBody');
+        print('ServiceID: $_serviceId, TemplateID: $_templateId');
+        print('Recipient: $recipientEmail');
+        // Check if it's a configuration error
+        if (response.statusCode == 400 || response.statusCode == 401) {
+          print(
+              '⚠️ EmailJS credentials may be incorrect. Please check service_id, template_id, and public_key.');
+        }
         return false;
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       print('❌ EmailJS SOS Exception: $e');
+      print('Stack trace: $stackTrace');
       return false;
     }
   }

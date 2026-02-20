@@ -224,52 +224,63 @@ Sent from: Sugenix - Diabetes Management App
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      // Send Email messages to all emergency contacts
+      // Send Email messages to all emergency contacts with email addresses
       List<Map<String, dynamic>> notificationResults = [];
       Map<String, dynamic> notificationStatus = {};
 
-      for (final contact in emergencyContacts) {
+      print('📧 Attempting to send SOS emails to ${contactsWithEmail.length} contact(s) with email');
+
+      for (final contact in contactsWithEmail) {
         final contactName = contact['name']?.toString() ?? 'Emergency Contact';
-        final email = contact['email']?.toString() ?? '';
-        final phone = contact['phone']?.toString() ?? '';
+        final email = contact['email']?.toString().trim();
 
-        if (email.isNotEmpty) {
-          try {
-            final emailSuccess = await EmailJSService.sendSOSEmail(
-              recipientEmail: email,
-              recipientName: contactName,
-              userName: userName,
-              message: sosMessage,
-              latitude: position?.latitude,
-              longitude: position?.longitude,
-            ).timeout(const Duration(seconds: 12), onTimeout: () => false);
+        if (email == null || email.isEmpty) {
+          print('⚠️ Skipping contact $contactName - email is empty');
+          continue;
+        }
 
-            notificationResults.add({
-              'contact': contactName,
-              'email': email,
-              'status': emailSuccess ? 'sent' : 'failed',
-              'timestamp': DateTime.now().toIso8601String(),
-            });
+        print('📧 Sending SOS email to $contactName ($email)...');
+        
+        try {
+          final emailSuccess = await EmailJSService.sendSOSEmail(
+            recipientEmail: email,
+            recipientName: contactName,
+            userName: userName,
+            message: sosMessage,
+            latitude: position?.latitude,
+            longitude: position?.longitude,
+          ).timeout(const Duration(seconds: 15), onTimeout: () {
+            print('⏱️ EmailJS timeout for $email');
+            return false;
+          });
 
-            notificationStatus[email.replaceAll('.', '_')] = {
-              'name': contactName,
-              'status': emailSuccess ? 'sent' : 'failed',
-              'timestamp': FieldValue.serverTimestamp(),
-            };
-          } catch (e) {
-            notificationResults.add({
-              'contact': contactName,
-              'email': email,
-              'status': 'failed',
-              'error': e.toString(),
-            });
+          if (emailSuccess) {
+            print('✅ SOS email sent successfully to $email');
+          } else {
+            print('❌ Failed to send SOS email to $email');
           }
-        } else {
+
           notificationResults.add({
             'contact': contactName,
-            'phone': phone,
-            'status': 'skipped',
-            'reason': 'No email provided',
+            'email': email,
+            'status': emailSuccess ? 'sent' : 'failed',
+            'timestamp': DateTime.now().toIso8601String(),
+          });
+
+          notificationStatus[email.replaceAll('.', '_')] = {
+            'name': contactName,
+            'status': emailSuccess ? 'sent' : 'failed',
+            'timestamp': FieldValue.serverTimestamp(),
+          };
+        } catch (e, stackTrace) {
+          print('❌ Exception sending SOS email to $email: $e');
+          print('Stack trace: $stackTrace');
+          notificationResults.add({
+            'contact': contactName,
+            'email': email,
+            'status': 'failed',
+            'error': e.toString(),
+            'timestamp': DateTime.now().toIso8601String(),
           });
         }
       }
@@ -282,14 +293,28 @@ Sent from: Sugenix - Diabetes Management App
 
       final successCount =
           notificationResults.where((r) => r['status'] == 'sent').length;
+      final failedCount = notificationResults.where((r) => r['status'] == 'failed').length;
+
+      print('📊 SOS Email Summary: $successCount sent, $failedCount failed out of ${contactsWithEmail.length} contacts');
+
+      if (successCount == 0 && failedCount > 0) {
+        // Get first error for more details
+        final firstError = notificationResults.firstWhere(
+          (r) => r['status'] == 'failed',
+          orElse: () => {},
+        );
+        final errorMsg = firstError['error']?.toString() ?? 'Unknown error';
+        print('❌ All emails failed. First error: $errorMsg');
+      }
 
       return {
         'success': successCount > 0,
         'contactsNotified': successCount,
-        'totalContacts': emergencyContacts.length,
+        'totalContacts': contactsWithEmail.length,
+        'failedCount': failedCount,
         'notificationDetails': notificationResults,
         'error': successCount == 0
-            ? 'Failed to notify any contacts via email. Please check your internet connection or contact settings.'
+            ? 'Failed to notify any contacts via email. Please check your internet connection, EmailJS settings, or contact settings.'
             : null,
       };
     } catch (e) {
