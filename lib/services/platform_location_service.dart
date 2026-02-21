@@ -35,25 +35,23 @@ class PlatformLocationService {
           return null;
         }
 
-        // Use lower accuracy if high accuracy fails (works better without SIM/WiFi)
+        // Increased timeouts for better reliability during emergencies
         try {
           return await Geolocator.getCurrentPosition(
             desiredAccuracy: LocationAccuracy.high,
-            timeLimit: const Duration(seconds: 4),
+            timeLimit: const Duration(seconds: 10),
           );
         } catch (e) {
-          // Fallback to lower accuracy if high accuracy fails
           try {
             return await Geolocator.getCurrentPosition(
               desiredAccuracy: LocationAccuracy.medium,
-              timeLimit: const Duration(seconds: 3),
+              timeLimit: const Duration(seconds: 5),
             );
           } catch (e2) {
-            // Last resort: use low accuracy
             try {
               return await Geolocator.getCurrentPosition(
                 desiredAccuracy: LocationAccuracy.low,
-                timeLimit: const Duration(seconds: 2),
+                timeLimit: const Duration(seconds: 5),
               );
             } catch (e3) {
               return null;

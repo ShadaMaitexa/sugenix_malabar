@@ -397,7 +397,8 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
           await Future.delayed(const Duration(milliseconds: 400));
           if (!mounted) return;
           final dt = _lastAppointmentDateTime ??
-              DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
+              DateTime(
+                  _selectedDate.year, _selectedDate.month, _selectedDate.day);
           _showSuccessDialog(context, dt);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -1119,6 +1120,9 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
                 context, 'Credit/Debit Card', 'razorpay', Icons.credit_card),
             _buildPaymentOption(
                 context, 'Net Banking', 'razorpay', Icons.account_balance),
+            const Divider(),
+            _buildPaymentOption(context, 'Pay at Hospital / Clinic', 'direct',
+                Icons.local_hospital),
           ],
         ),
         actions: [
@@ -1167,6 +1171,47 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
     if (_lastAppointmentId == null) return;
 
     Navigator.pop(context); // Close payment dialog
+
+    if (method == 'direct') {
+      setState(() {
+        _isLoading = true;
+      });
+
+      try {
+        await _appointmentService.processPayment(
+          appointmentId: _lastAppointmentId!,
+          paymentMethod: 'Pay at Hospital',
+        );
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+          final dt = _lastAppointmentDateTime ??
+              DateTime(
+                  _selectedDate.year, _selectedDate.month, _selectedDate.day);
+          _showSuccessDialog(context, dt);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Appointment booked with offline payment!'),
+              backgroundColor: Colors.blue,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to confirm booking: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+      return;
+    }
 
     // Razorpay only (test key – no KYC required)
     final consultationFee = widget.doctor.consultationFee;

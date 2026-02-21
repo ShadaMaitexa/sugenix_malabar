@@ -143,7 +143,8 @@ Sent from: Sugenix - Diabetes Management App
             await PlatformLocationService.hasLocationPermission();
         if (!hasPermission) {
           print('📍 Permission not granted, requesting...');
-          final granted = await PlatformLocationService.requestLocationPermission();
+          final granted =
+              await PlatformLocationService.requestLocationPermission();
           if (!granted) {
             locationError = 'Location permission denied';
             print('⚠️ Location permission denied');
@@ -161,7 +162,8 @@ Sent from: Sugenix - Diabetes Management App
           });
 
           if (position != null) {
-            print('✅ Location obtained: ${position.latitude}, ${position.longitude}');
+            print(
+                '✅ Location obtained: ${position.latitude}, ${position.longitude}');
             final pos = position;
             try {
               // Very short timeout for reverse geocoding to avoid blocking SOS
@@ -233,7 +235,8 @@ Sent from: Sugenix - Diabetes Management App
             ? {
                 'latitude': position.latitude,
                 'longitude': position.longitude,
-                'address': address ?? 'Location obtained but address unavailable',
+                'address':
+                    address ?? 'Location obtained but address unavailable',
               }
             : null,
         'locationError': locationError,
@@ -245,26 +248,19 @@ Sent from: Sugenix - Diabetes Management App
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      // Send Email messages to all emergency contacts with email addresses
-      List<Map<String, dynamic>> notificationResults = [];
-      Map<String, dynamic> notificationStatus = {};
+      // Send Email messages to all emergency contacts in PARALLEL
+      print(
+          '📧 Attempting to send SOS emails to ${contactsWithEmail.length} contact(s) in parallel');
 
-      print('📧 Attempting to send SOS emails to ${contactsWithEmail.length} contact(s) with email');
-
-      for (final contact in contactsWithEmail) {
+      final List<Future<Map<String, dynamic>>> emailFutures =
+          contactsWithEmail.map((contact) async {
         final contactName = contact['name']?.toString() ?? 'Emergency Contact';
-        final email = contact['email']?.toString().trim();
+        final email = contact['email']?.toString().trim() ?? '';
 
-        if (email == null || email.isEmpty) {
-          print('⚠️ Skipping contact $contactName - email is empty');
-          continue;
-        }
+        if (email.isEmpty) return {'status': 'skipped', 'contact': contactName};
 
         print('📧 Sending SOS email to $contactName ($email)...');
-        
-        String? emailError;
-        bool emailSuccess = false;
-        
+
         try {
           final emailResult = await EmailJSService.sendSOSEmailWithError(
             recipientEmail: email,
@@ -273,38 +269,41 @@ Sent from: Sugenix - Diabetes Management App
             message: sosMessage,
             latitude: position?.latitude,
             longitude: position?.longitude,
-          ).timeout(const Duration(seconds: 15), onTimeout: () {
-            emailError = 'EmailJS request timeout (15s)';
-            print('⏱️ EmailJS timeout for $email');
-            return {'success': false, 'error': emailError!};
-          });
+          ).timeout(const Duration(seconds: 15));
 
-          emailSuccess = emailResult['success'] == true;
-          emailError = emailResult['error'] as String?;
+          bool emailSuccess = emailResult['success'] == true;
+          String? emailError = emailResult['error'] as String?;
 
-          if (emailSuccess) {
-            print('✅ SOS email sent successfully to $email');
-          } else {
-            print('❌ Failed to send SOS email to $email: ${emailError ?? "Unknown error"}');
-          }
-        } catch (e, stackTrace) {
-          emailError = e.toString();
-          print('❌ Exception sending SOS email to $email: $e');
-          print('Stack trace: $stackTrace');
+          return {
+            'contact': contactName,
+            'email': email,
+            'phone': contact['phone']?.toString() ?? '',
+            'status': emailSuccess ? 'sent' : 'failed',
+            'error': emailError,
+            'timestamp': DateTime.now().toIso8601String(),
+          };
+        } catch (e) {
+          return {
+            'contact': contactName,
+            'email': email,
+            'status': 'failed',
+            'error': e.toString(),
+            'timestamp': DateTime.now().toIso8601String(),
+          };
         }
+      }).toList();
 
-        notificationResults.add({
-          'contact': contactName,
-          'email': email,
-          'status': emailSuccess ? 'sent' : 'failed',
-          'error': emailError,
-          'timestamp': DateTime.now().toIso8601String(),
-        });
+      final List<Map<String, dynamic>> notificationResults =
+          await Future.wait(emailFutures);
+      Map<String, dynamic> notificationStatus = {};
 
-        notificationStatus[email.replaceAll('.', '_')] = {
-          'name': contactName,
-          'status': emailSuccess ? 'sent' : 'failed',
-          'error': emailError,
+      for (var res in notificationResults) {
+        if (res['status'] == 'skipped') continue;
+        final emailKey = (res['email'] as String).replaceAll('.', '_');
+        notificationStatus[emailKey] = {
+          'name': res['contact'],
+          'status': res['status'],
+          'error': res['error'],
           'timestamp': FieldValue.serverTimestamp(),
         };
       }
@@ -317,9 +316,11 @@ Sent from: Sugenix - Diabetes Management App
 
       final successCount =
           notificationResults.where((r) => r['status'] == 'sent').length;
-      final failedCount = notificationResults.where((r) => r['status'] == 'failed').length;
+      final failedCount =
+          notificationResults.where((r) => r['status'] == 'failed').length;
 
-      print('📊 SOS Email Summary: $successCount sent, $failedCount failed out of ${contactsWithEmail.length} contacts');
+      print(
+          '📊 SOS Email Summary: $successCount sent, $failedCount failed out of ${contactsWithEmail.length} contacts');
 
       if (successCount == 0 && failedCount > 0) {
         // Get first error for more details

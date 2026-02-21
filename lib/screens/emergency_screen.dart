@@ -3,6 +3,7 @@ import 'package:sugenix/services/sos_alert_service.dart';
 import 'package:sugenix/utils/responsive_layout.dart';
 import 'package:sugenix/services/language_service.dart';
 import 'package:sugenix/services/platform_location_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class EmergencyScreen extends StatefulWidget {
   const EmergencyScreen({super.key});
@@ -42,10 +43,11 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
           stream: LanguageService.currentLanguageStream,
           builder: (context, snapshot) {
             final lang = snapshot.data ?? 'en';
-            final title = LanguageService.translate('home', lang);
+            final title = LanguageService.translate('emergency', lang);
             return Text(
-              title == 'home' ? 'Emergency' : title,
-              style: const TextStyle(color: Colors.white),
+              title,
+              style: const TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.bold),
             );
           },
         ),
@@ -304,23 +306,85 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
     );
   }
 
+  void _sendManualSMS(String phone, String name) async {
+    final String message = "🚨 SOS EMERGENCY ALERT! 🚨\n\n"
+        "This is an emergency alert from Sugenix App. The user is in distress and needs immediate help.\n\n"
+        "Please check on them! System triggered this because email alert to you failed.";
+
+    final Uri smsUri = Uri(
+      scheme: 'sms',
+      path: phone,
+      queryParameters: {'body': message},
+    );
+
+    try {
+      if (await canLaunchUrl(smsUri)) {
+        await launchUrl(smsUri);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Could not open SMS app")));
+      }
+    } catch (e) {
+      print("SMS launch error: $e");
+    }
+  }
+
   void _showStatus(List<Map<String, dynamic>> details) {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
         title: const Text("SOS Status"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: details.map((d) {
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Text(
-                "${d['status'] == 'sent' ? '✅' : '❌'} "
-                "${d['contact']} - ${((d['email'] ?? '').toString().isNotEmpty) ? d['email'] : d['phone']}",
-                style: const TextStyle(fontSize: 12),
-              ),
-            );
-          }).toList(),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: details.map((d) {
+              final bool isFailed = d['status'] == 'failed';
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Text(d['status'] == 'sent' ? '✅' : '❌'),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            "${d['contact']} (${d['email'] ?? d['phone'] ?? ''})",
+                            style: const TextStyle(
+                                fontSize: 14, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (isFailed) ...[
+                      Text(
+                        "Error: ${d['error'] ?? 'Unknown'}",
+                        style: const TextStyle(fontSize: 11, color: Colors.red),
+                      ),
+                      const SizedBox(height: 4),
+                      TextButton.icon(
+                        onPressed: () {
+                          final phone = d['phone'] ?? '';
+                          if (phone.isNotEmpty) {
+                            _sendManualSMS(phone, d['contact'] ?? '');
+                          }
+                        },
+                        icon: const Icon(Icons.sms, size: 16),
+                        label: const Text("Send Manual SMS Fallback",
+                            style: TextStyle(fontSize: 12)),
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
         ),
         actions: [
           TextButton(
