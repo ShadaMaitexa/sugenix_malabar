@@ -43,6 +43,7 @@ import 'package:sugenix/screens/web_landing_screen.dart';
 import 'package:sugenix/screens/unsupported_role_screen.dart';
 import 'package:sugenix/screens/chat_list_screen.dart';
 import 'package:sugenix/services/language_service.dart';
+import 'package:sugenix/screens/terms_and_conditions_screen.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
@@ -167,6 +168,7 @@ class _SugenixAppState extends State<SugenixApp> {
             '/pharmacy-dashboard': (context) => const PharmacyDashboardScreen(),
             '/prescription-upload': (context) =>
                 const PrescriptionUploadScreen(),
+            '/terms': (context) => const TermsAndConditionsScreen(),
           },
         );
       },

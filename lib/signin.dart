@@ -236,11 +236,60 @@ class _SignupState extends State<Signup> {
                                         activeColor: const Color(0xFF0C4556),
                                       ),
                                       Expanded(
-                                        child: TranslatedText(
-                                          'agree_terms',
-                                          style: const TextStyle(fontSize: 14),
-                                          fallback:
-                                              'I agree to the terms and conditions',
+                                        child: GestureDetector(
+                                          onTap: () {
+                                            Navigator.pushNamed(
+                                                context, '/terms');
+                                          },
+                                          child: Text.rich(
+                                            TextSpan(
+                                              text: LanguageService.translate(
+                                                          'agree_prefix',
+                                                          languageCode)
+                                                      .contains('agree_prefix')
+                                                  ? 'I agree to the '
+                                                  : LanguageService.translate(
+                                                      'agree_prefix',
+                                                      languageCode),
+                                              style:
+                                                  const TextStyle(fontSize: 14),
+                                              children: [
+                                                TextSpan(
+                                                  text: LanguageService.translate(
+                                                              'terms_conditions',
+                                                              languageCode)
+                                                          .contains(
+                                                              'terms_conditions')
+                                                      ? 'terms and conditions'
+                                                      : LanguageService
+                                                          .translate(
+                                                              'terms_conditions',
+                                                              languageCode),
+                                                  style: const TextStyle(
+                                                    color: Color(0xFF0C4556),
+                                                    fontWeight: FontWeight.bold,
+                                                    decoration: TextDecoration
+                                                        .underline,
+                                                  ),
+                                                ),
+                                                TextSpan(
+                                                  text: LanguageService
+                                                              .translate(
+                                                                  'agree_suffix',
+                                                                  languageCode)
+                                                          .contains(
+                                                              'agree_suffix')
+                                                      ? ''
+                                                      : LanguageService
+                                                          .translate(
+                                                              'agree_suffix',
+                                                              languageCode),
+                                                  style: const TextStyle(
+                                                      fontSize: 14),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
                                         ),
                                       ),
                                     ],

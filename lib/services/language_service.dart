@@ -57,9 +57,26 @@ class LanguageService {
       'passwords_no_match': 'Passwords do not match',
       'password_min_length': 'Password must be at least 6 characters',
       'signup_failed': 'Signup failed',
-      'login_failed': 'Login failed',
       'account_pending':
           'Your account is pending admin approval. Please wait for approval before logging in.',
+      'agree_prefix': 'I agree to the ',
+      'agree_suffix': '',
+      'terms_and_conditions_title': 'Terms and Conditions',
+      'terms_section_1_title': '1. Acceptance of Terms',
+      'terms_section_1_content':
+          'By accessing and using Sugenix, you agree to be bound by these Terms and Conditions and all applicable laws and regulations.',
+      'terms_section_2_title': '2. Medical Disclaimer',
+      'terms_section_2_content':
+          'Sugenix is a tool for diabetes management and should not be used as a substitute for professional medical advice, diagnosis, or treatment. Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition.',
+      'terms_section_3_title': '3. User Privacy',
+      'terms_section_3_content':
+          'Your privacy is important to us. Our Privacy Policy explains how we collect, use, and protect your personal information. By using our service, you agree to the collection and use of information in accordance with our policy.',
+      'terms_section_4_title': '4. Account Responsibilities',
+      'terms_section_4_content':
+          'You are responsible for maintaining the confidentiality of your account and password. You agree to notify us immediately of any unauthorized use of your account.',
+      'terms_section_5_title': '5. Limitation of Liability',
+      'terms_section_5_content':
+          'Sugenix and its creators shall not be liable for any direct, indirect, incidental, special, or consequential damages resulting from the use or inability to use the service.',
       // Home Screen
       'welcome_back_comma': 'Welcome back,',
       'current_glucose_level': 'Current Glucose Level',
@@ -218,9 +235,26 @@ class LanguageService {
       'passwords_no_match': 'പാസ്‌വേഡുകൾ പൊരുത്തപ്പെടുന്നില്ല',
       'password_min_length': 'പാസ്‌വേഡ് കുറഞ്ഞത് 6 പ്രതീകങ്ങൾ ആയിരിക്കണം',
       'signup_failed': 'സൈൻ അപ്പ് പരാജയപ്പെട്ടു',
-      'login_failed': 'ലോഗിൻ പരാജയപ്പെട്ടു',
       'account_pending':
           'നിങ്ങളുടെ അക്കൗണ്ട് അഡ്മിൻ അംഗീകാരത്തിനായി കാത്തിരിക്കുന്നു. ലോഗിൻ ചെയ്യുന്നതിന് മുമ്പ് അംഗീകാരത്തിനായി കാത്തിരിക്കുക.',
+      'agree_prefix': 'ഞാൻ ',
+      'agree_suffix': ' അംഗീകരിക്കുന്നു',
+      'terms_and_conditions_title': 'നിബന്ധനകളും വ്യവസ്ഥകളും',
+      'terms_section_1_title': '1. നിബന്ധനകളുടെ അംഗീകാരം',
+      'terms_section_1_content':
+          'സുജെനിക്സ് ആക്സസ് ചെയ്യുന്നതിലൂടെയും ഉപയോഗിക്കുന്നതിലൂടെയും, ഈ നിബന്ധനകളും വ്യവസ്ഥകളും ബാധകമായ എല്ലാ നിയമങ്ങളും ചട്ടങ്ങളും പാലിക്കുമെന്ന് നിങ്ങൾ സമ്മതിക്കുന്നു.',
+      'terms_section_2_title': '2. മെഡിക്കൽ നിരാകരണം',
+      'terms_section_2_content':
+          'പ്രമേഹ നിയന്ത്രണത്തിനുള്ള ഒരു ഉപകരണമാണ് സുജെനിക്സ്, ഇത് പ്രൊഫഷണൽ മെഡിക്കൽ ഉപദേശത്തിനോ രോഗനിർണ്ണയത്തിനോ ചികിത്സയ്ക്കോ പകരമായി ഉപയോഗിക്കരുത്.',
+      'terms_section_3_title': '3. ഉപയോക്തൃ സ്വകാര്യത',
+      'terms_section_3_content':
+          'നിങ്ങളുടെ സ്വകാര്യത ഞങ്ങൾക്ക് പ്രധാനമാണ്. ഞങ്ങളുടെ സേവനം ഉപയോഗിക്കുന്നതിലൂടെ, ഞങ്ങളുടെ നയത്തിന് അനുസൃതമായി വിവരങ്ങൾ ശേഖരിക്കുന്നതിനും ഉപയോഗിക്കുന്നതിനും നിങ്ങൾ സമ്മതിക്കുന്നു.',
+      'terms_section_4_title': '4. അക്കൗണ്ട് ഉത്തരവാദിത്തങ്ങൾ',
+      'terms_section_4_content':
+          'നിങ്ങളുടെ അക്കൗണ്ടിന്റെയും പാസ്‌വേഡിന്റെയും രഹസ്യസ്വഭാവം കാത്തുസൂക്ഷിക്കുന്നതിന് നിങ്ങൾ ഉത്തരവാദിയാണ്.',
+      'terms_section_5_title': '5. ബാധ്യതാ പരിമിതി',
+      'terms_section_5_content':
+          'സേവനം ഉപയോഗിക്കുന്നതിലൂടെയോ ഉപയോഗിക്കാനുള്ള കഴിവില്ലായ്മയിലൂടെയോ ഉണ്ടാകുന്ന നേരിട്ടുള്ളതോ അല്ലാത്തതോ ആയ നാശനഷ്ടങ്ങൾക്ക് സുജെനിക്സും അതിന്റെ സ്രഷ്‌ടാക്കളും ഉത്തരവാദികളായിരിക്കില്ല.',
       // Home Screen
       'welcome_back_comma': 'വീണ്ടും സ്വാഗതം,',
       'current_glucose_level': 'നിലവിലെ ഗ്ലൂക്കോസ് നില',
@@ -381,9 +415,26 @@ class LanguageService {
       'passwords_no_match': 'पासवर्ड मेल नहीं खाते',
       'password_min_length': 'पासवर्ड कम से कम 6 अक्षर का होना चाहिए',
       'signup_failed': 'साइन अप विफल',
-      'login_failed': 'लॉगिन विफल',
       'account_pending':
           'आपका खाता व्यवस्थापक अनुमोदन के लिए लंबित है। लॉगिन करने से पहले कृपया अनुमोदन की प्रतीक्षा करें।',
+      'agree_prefix': 'मैं ',
+      'agree_suffix': ' से सहमत हूं',
+      'terms_and_conditions_title': 'नियम और शर्तें',
+      'terms_section_1_title': '1. शर्तों की स्वीकृति',
+      'terms_section_1_content':
+          'सुजेनिक्स का उपयोग करके, आप इन नियमों और शर्तों और सभी लागू कानूनों और विनियमों से बाध्य होने के लिए सहमत हैं।',
+      'terms_section_2_title': '2. चिकित्सा अस्वीकरण',
+      'terms_section_2_content':
+          'सुजेनिक्स मधुमेह प्रबंधन के लिए एक उपकरण है और इसे पेशेवर चिकित्सा सलाह के विकल्प के रूप में उपयोग नहीं किया जाना चाहिए।',
+      'terms_section_3_title': '3. उपयोगकर्ता गोपनीयता',
+      'terms_section_3_content':
+          'आपकी गोपनीयता हमारे लिए महत्वपूर्ण है। हमारी सेवा का उपयोग करके, आप हमारी नीति के अनुसार जानकारी के संग्रह और उपयोग से सहमत हैं।',
+      'terms_section_4_title': '4. खाता जिम्मेदारियां',
+      'terms_section_4_content':
+          'आप अपने खाते और पासवर्ड की गोपनीयता बनाए रखने के लिए जिम्मेदार हैं।',
+      'terms_section_5_title': '5. देयता की सीमा',
+      'terms_section_5_content':
+          'सुजेनिक्स और इसके निर्माता सेवा के उपयोग से होने वाले किसी भी नुकसान के लिए उत्तरदायी नहीं होंगे।',
       // Home Screen
       'welcome_back_comma': 'वापसी पर स्वागत है,',
       'current_glucose_level': 'वर्तमान ग्लूकोज स्तर',
