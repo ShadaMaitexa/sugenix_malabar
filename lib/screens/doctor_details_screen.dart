@@ -1074,7 +1074,7 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text(
           'Payment Required',
           style:
@@ -1114,15 +1114,15 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
               style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
             ),
             const SizedBox(height: 10),
-            _buildPaymentOption(context, 'UPI / Wallet', 'razorpay',
+            _buildPaymentOption(dialogContext, 'UPI / Wallet', 'razorpay',
                 Icons.account_balance_wallet),
-            _buildPaymentOption(
-                context, 'Credit/Debit Card', 'razorpay', Icons.credit_card),
-            _buildPaymentOption(
-                context, 'Net Banking', 'razorpay', Icons.account_balance),
+            _buildPaymentOption(dialogContext, 'Credit/Debit Card', 'razorpay',
+                Icons.credit_card),
+            _buildPaymentOption(dialogContext, 'Net Banking', 'razorpay',
+                Icons.account_balance),
             const Divider(),
-            _buildPaymentOption(context, 'Pay at Hospital / Clinic', 'direct',
-                Icons.local_hospital),
+            _buildPaymentOption(dialogContext, 'Pay at Hospital / Clinic',
+                'direct', Icons.local_hospital),
           ],
         ),
         actions: [
@@ -1167,10 +1167,40 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
     );
   }
 
-  Future<void> _handlePaymentMethod(BuildContext context, String method) async {
+  Future<void> _handlePaymentMethod(
+      BuildContext dialogContext, String method) async {
     if (_lastAppointmentId == null) return;
 
-    Navigator.pop(context); // Close payment dialog
+    if (method == 'direct') {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Confirm Appointment',
+              style: TextStyle(
+                  color: Color(0xFF0C4556), fontWeight: FontWeight.bold)),
+          content: const Text(
+              'Are you sure you want to book this appointment and pay at the hospital/clinic?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel', style: TextStyle(color: Colors.red)),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0C4556)),
+              child:
+                  const Text('Confirm', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      );
+
+      if (confirm != true) return;
+    }
+
+    if (!mounted) return;
+    Navigator.pop(dialogContext); // Close payment dialog
 
     if (method == 'direct') {
       setState(() {
@@ -1192,8 +1222,8 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
           _showSuccessDialog(context, dt);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Appointment booked with offline payment!'),
-              backgroundColor: Colors.blue,
+              content: Text('Appointment booked successfully!'),
+              backgroundColor: Colors.green,
             ),
           );
         }
@@ -1394,7 +1424,7 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
             const Icon(Icons.check_circle, color: Colors.green, size: 28),
             const SizedBox(width: 10),
             const Text(
-              'Booked successfully',
+              'Successfully Booked Appointment',
               style: TextStyle(
                 color: Color(0xFF0C4556),
                 fontWeight: FontWeight.bold,

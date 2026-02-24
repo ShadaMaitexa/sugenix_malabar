@@ -12,6 +12,7 @@ class OrderDetailsScreen extends StatefulWidget {
 class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
   final MedicineOrdersService _ordersService = MedicineOrdersService();
   Map<String, dynamic>? _order;
+  bool _isLoading = true;
   bool _cancelling = false;
 
   @override
@@ -21,14 +22,22 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
   }
 
   Future<void> _load() async {
+    setState(() => _isLoading = true);
     try {
       final data = await _ordersService.getOrderById(widget.orderId);
-      if (mounted) setState(() => _order = data);
+      if (mounted) {
+        setState(() {
+          _order = data;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to load order: ${e.toString()}')),
-      );
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load order: ${e.toString()}')),
+        );
+      }
     }
   }
 
@@ -50,10 +59,11 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
         const SnackBar(content: Text('Order cancelled')),
       );
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to cancel: ${e.toString()}')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to cancel: ${e.toString()}')),
+        );
+      }
     } finally {
       if (mounted) setState(() => _cancelling = false);
     }
@@ -78,8 +88,32 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
         ),
       ),
       backgroundColor: const Color(0xFFF5F6F8),
-      body: _order == null
-              ? const Center(child: Text('Order not found'))
+      body: _isLoading
+          ? const Center(
+              child: CircularProgressIndicator(color: Color(0xFF0C4556)))
+          : _order == null
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.error_outline,
+                          size: 60, color: Colors.grey),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Order not found',
+                        style: TextStyle(
+                            color: Color(0xFF0C4556),
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      TextButton(
+                        onPressed: _load,
+                        child: const Text('Try Again'),
+                      ),
+                    ],
+                  ),
+                )
               : Column(
                   children: [
                     Expanded(
@@ -112,9 +146,11 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                                 ? const SizedBox(
                                     width: 18,
                                     height: 18,
-                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.red),
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2, color: Colors.red),
                                   )
-                                : const Text('Cancel Order', style: TextStyle(color: Colors.red)),
+                                : const Text('Cancel Order',
+                                    style: TextStyle(color: Colors.red)),
                           ),
                         ),
                       ),
@@ -125,9 +161,10 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
   }
 
   Widget _buildSummaryCard() {
-    final status = (_order!['status'] as String?) ?? 'pending';
+    final status = _order!['status']?.toString() ?? 'pending';
     final total = (_order!['total'] as num?)?.toDouble() ?? 0.0;
-    final orderNumber = (_order!['orderNumber'] as String?) ?? (_order!['id'] as String? ?? '');
+    final orderNumber =
+        _order!['orderNumber']?.toString() ?? (_order!['id']?.toString() ?? '');
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -155,14 +192,20 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: Colors.blue.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  status[0].toUpperCase() + status.substring(1),
-                  style: const TextStyle(color: Colors.blue, fontWeight: FontWeight.w600, fontSize: 12),
+                  status.isNotEmpty
+                      ? status[0].toUpperCase() + status.substring(1)
+                      : 'Pending',
+                  style: const TextStyle(
+                      color: Colors.blue,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12),
                 ),
               ),
             ],
@@ -188,9 +231,13 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
   }
 
   Widget _buildItemsCard() {
-    final items = (_order!['items'] as List<dynamic>? ?? [])
-        .map((e) => e as Map<String, dynamic>)
-        .toList();
+    final itemsList = (_order!['items'] as List<dynamic>? ?? []);
+    final List<Map<String, dynamic>> items = [];
+    for (var item in itemsList) {
+      if (item is Map) {
+        items.add(Map<String, dynamic>.from(item));
+      }
+    }
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -233,7 +280,8 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        (item['medicineName'] as String?) ?? (item['name'] as String? ?? ''),
+                        (item['medicineName'] ?? (item['name'] ?? ''))
+                            .toString(),
                         style: const TextStyle(
                           color: Color(0xFF0C4556),
                           fontWeight: FontWeight.w600,
@@ -243,7 +291,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Qty: ${(item['quantity'] as int?) ?? 1}',
+                        'Qty: ${item['quantity'] ?? 1}',
                         style: const TextStyle(color: Colors.grey),
                       ),
                     ],
@@ -267,7 +315,9 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
   }
 
   Widget _buildAddressCard() {
-    final address = _order!['shippingAddress'] as Map<String, dynamic>?;
+    final addressRaw = _order!['shippingAddress'];
+    final Map<String, dynamic>? address =
+        addressRaw is Map ? Map<String, dynamic>.from(addressRaw) : null;
     final addressStr = address == null
         ? 'N/A'
         : [
@@ -276,7 +326,9 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
             address['city'],
             address['state'],
             address['zip'],
-          ].whereType<String>().where((s) => s.trim().isNotEmpty).join(', ');
+          ]
+            .where((s) => s != null && s.toString().trim().isNotEmpty)
+            .join(', ');
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -310,5 +362,3 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     );
   }
 }
-
-
