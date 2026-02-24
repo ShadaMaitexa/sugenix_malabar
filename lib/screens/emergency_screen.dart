@@ -277,10 +277,18 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
         } else if (result['type'] == 'no_email') {
           _showNoEmailDialog();
         } else {
+          final errorMsg = result['error']?.toString() ?? "SOS failed";
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(result['error'] ?? "SOS failed"),
+              content: Text(errorMsg),
               backgroundColor: Colors.red,
+              duration:
+                  const Duration(seconds: 10), // Show longer for debugging
+              action: SnackBarAction(
+                label: "OK",
+                textColor: Colors.white,
+                onPressed: () {},
+              ),
             ),
           );
         }

@@ -19,7 +19,7 @@ class SOSAlertService {
     required double? longitude,
     required List<Map<String, dynamic>> recentReadings,
   }) {
-    String message = '''🚨 SOS EMERGENCY ALERT 🚨
+    String message = '''SOS EMERGENCY ALERT
     
 User: $userName
 Alert Type: Medical Emergency
@@ -266,6 +266,7 @@ Sent from: Sugenix - Diabetes Management App
             recipientEmail: email,
             recipientName: contactName,
             userName: userName,
+            userEmail: userEmail,
             message: sosMessage,
             latitude: position?.latitude,
             longitude: position?.longitude,
@@ -339,7 +340,9 @@ Sent from: Sugenix - Diabetes Management App
         'failedCount': failedCount,
         'notificationDetails': notificationResults,
         'error': successCount == 0
-            ? 'Failed to notify any contacts via email. Please check your internet connection, EmailJS settings, or contact settings.'
+            ? 'Failed to notify any contacts. Error: ${notificationResults.isNotEmpty ? notificationResults.firstWhere((r) => r['status'] == 'failed', orElse: () => {
+                  'error': 'No contacts were attempted'
+                })['error'] : 'No contacts attempted'}'
             : null,
       };
     } catch (e) {

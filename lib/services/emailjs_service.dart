@@ -20,12 +20,10 @@ class EmailJSService {
   // ⚠️ IMPORTANT: Replace these with your actual EmailJS credentials
   // Get these from https://www.emailjs.com/
   // Current values are placeholders - emails won't work until replaced
-  static const String _serviceId =
-      'service_f6ka8jm'; // TODO: Replace with your EmailJS Service ID
-  static const String _templateId =
-      'template_u50mo7i'; // TODO: Replace with your EmailJS Template ID (used for both admin approval and SOS emails)
-  static const String _publicKey =
-      'CHxG3ZYeXEUuvz1MA'; // TODO: Replace with your EmailJS Public Key (User ID)
+  static const String _serviceId = 'service_f6ka8jm';
+  static const String _approvalTemplateId = 'template_xygncaq';
+  static const String _sosTemplateId = 'template_u50mo7i';
+  static const String _publicKey = 'CHxG3ZYeXEUuvz1MA';
   static const String _baseUrl = 'https://api.emailjs.com/api/v1.0/email/send';
 
   /// Send approval email to pharmacy or doctor
@@ -76,7 +74,7 @@ Sugenix Team''';
         },
         body: jsonEncode({
           'service_id': _serviceId,
-          'template_id': _templateId,
+          'template_id': _approvalTemplateId,
           'user_id': _publicKey,
           'template_params': {
             'to_email': recipientEmail,
@@ -155,7 +153,7 @@ We appreciate your interest in joining the Sugenix platform.'''
         },
         body: jsonEncode({
           'service_id': _serviceId,
-          'template_id': _templateId,
+          'template_id': _approvalTemplateId,
           'user_id': _publicKey,
           'template_params': {
             'to_email': recipientEmail,
@@ -201,14 +199,13 @@ We appreciate your interest in joining the Sugenix platform.'''
     required String recipientEmail,
     required String recipientName,
     required String userName,
+    required String userEmail,
     required String message,
     double? latitude,
     double? longitude,
   }) async {
     try {
-      // No emojis in subject/title to avoid encoding issues (same as approval emails)
-      final subject = 'CRITICAL: SOS Emergency Alert from $userName';
-      final title = 'MEDICAL EMERGENCY ALERT';
+      final subject = 'SOS Emergency Alert from $userName';
 
       final response = await http.post(
         Uri.parse(_baseUrl),
@@ -217,28 +214,31 @@ We appreciate your interest in joining the Sugenix platform.'''
         },
         body: jsonEncode({
           'service_id': _serviceId,
-          'template_id': _templateId,
+          'template_id': _sosTemplateId,
           'user_id': _publicKey,
           'template_params': {
             'to_email': recipientEmail,
-            'name': recipientName,
-            'email': 'support@sugenix.app',
-            'to_name': recipientName,
+            'name':
+                userName, // Changed to patient's name to match {{name}} in your template
+            'to_name': recipientName, // Original contact name
+            'email':
+                userEmail, // Changed to patient's actual email for Reply-To
             'subject': subject,
-            'title': title,
             'message': message,
-            'user_name': userName,
-            'from_name': userName,
-            'latitude': latitude?.toString() ?? '0.0',
-            'longitude': longitude?.toString() ?? '0.0',
+            'time': DateTime.now()
+                .toString()
+                .split('.')
+                .first, // Added {{time}} for your template
             'map_url': latitude != null && longitude != null
                 ? 'https://maps.google.com/?q=$latitude,$longitude'
-                : '',
+                : 'No location available',
             'app_name': 'Sugenix',
-            'login_url': 'https://sugenix.app/login',
           },
         }),
       );
+
+      print(
+          'DEBUG: SOS EmailJS Attempt - Service: $_serviceId, Template: $_sosTemplateId');
 
       if (response.statusCode == 200) {
         print('✅ SOS email sent successfully to $recipientEmail');
@@ -246,10 +246,11 @@ We appreciate your interest in joining the Sugenix platform.'''
       } else {
         final errorBody = response.body;
         print('❌ EmailJS SOS Error: ${response.statusCode}');
-        print('Error Response: $errorBody');
-        print('ServiceID: $_serviceId, TemplateID: $_templateId');
+        print('DEBUG: SOS Template Used: $_sosTemplateId');
+        print('DEBUG: Error Body: $errorBody');
+        print('ServiceID: $_serviceId, TemplateID: $_sosTemplateId');
         print('Recipient: $recipientEmail');
-        
+
         // Try to parse error message from response
         String errorMessage = 'HTTP ${response.statusCode}';
         try {
@@ -264,21 +265,26 @@ We appreciate your interest in joining the Sugenix platform.'''
         } catch (_) {
           errorMessage = errorBody.isNotEmpty ? errorBody : 'Unknown error';
         }
-        
+
         print('Parsed error: $errorMessage');
-        
+
         // Check if it's a configuration error
         if (response.statusCode == 400) {
-          errorMessage = 'Bad Request (400): Check template parameters and template_id. $errorMessage';
-          print('⚠️ EmailJS Bad Request (400) - Check template parameters and template_id');
+          errorMessage =
+              'Bad Request (400): Check template parameters and template_id. $errorMessage';
+          print(
+              '⚠️ EmailJS Bad Request (400) - Check template parameters and template_id');
         } else if (response.statusCode == 401) {
-          errorMessage = 'Unauthorized (401): Check public_key (user_id). $errorMessage';
+          errorMessage =
+              'Unauthorized (401): Check public_key (user_id). $errorMessage';
           print('⚠️ EmailJS Unauthorized (401) - Check public_key (user_id)');
         } else if (response.statusCode == 404) {
-          errorMessage = 'Not Found (404): Check service_id and template_id. $errorMessage';
-          print('⚠️ EmailJS Not Found (404) - Check service_id and template_id');
+          errorMessage =
+              'Not Found (404): Check service_id and template_id. $errorMessage';
+          print(
+              '⚠️ EmailJS Not Found (404) - Check service_id and template_id');
         }
-        
+
         return {'success': false, 'error': errorMessage};
       }
     } catch (e, stackTrace) {
@@ -295,6 +301,7 @@ We appreciate your interest in joining the Sugenix platform.'''
     required String recipientEmail,
     required String recipientName,
     required String userName,
+    String? userEmail,
     required String message,
     double? latitude,
     double? longitude,
@@ -303,6 +310,7 @@ We appreciate your interest in joining the Sugenix platform.'''
       recipientEmail: recipientEmail,
       recipientName: recipientName,
       userName: userName,
+      userEmail: userEmail ?? '',
       message: message,
       latitude: latitude,
       longitude: longitude,
