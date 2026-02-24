@@ -24,6 +24,9 @@ class EmailJSService {
   static const String _approvalTemplateId = 'template_xygncaq';
   static const String _sosTemplateId = 'template_u50mo7i';
   static const String _publicKey = 'CHxG3ZYeXEUuvz1MA';
+  // 🔑 Private Key - Required for strict mode.
+  // Get this from: https://dashboard.emailjs.com/ → Account → API Keys
+  static const String _privateKey = '5eNG3DW6xv0PbE5rSZjcm';
   static const String _baseUrl = 'https://api.emailjs.com/api/v1.0/email/send';
 
   /// Send approval email to pharmacy or doctor
@@ -76,6 +79,7 @@ Sugenix Team''';
           'service_id': _serviceId,
           'template_id': _approvalTemplateId,
           'user_id': _publicKey,
+          'accessToken': _privateKey,
           'template_params': {
             'to_email': recipientEmail,
             'name': recipientName, // Matches {{name}} in your screenshot
@@ -155,6 +159,7 @@ We appreciate your interest in joining the Sugenix platform.'''
           'service_id': _serviceId,
           'template_id': _approvalTemplateId,
           'user_id': _publicKey,
+          'accessToken': _privateKey,
           'template_params': {
             'to_email': recipientEmail,
             'name': recipientName, // Matches {{name}} in your screenshot
@@ -216,6 +221,7 @@ We appreciate your interest in joining the Sugenix platform.'''
           'service_id': _serviceId,
           'template_id': _sosTemplateId,
           'user_id': _publicKey,
+          'accessToken': _privateKey,
           'template_params': {
             'to_email': recipientEmail,
             'name':
