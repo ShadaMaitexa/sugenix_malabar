@@ -461,6 +461,10 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
   String _sosStatus = "";
 
   Widget _buildEmergencyActiveContent() {
+    final bool isFailed =
+        _sosStatus == "SOS Failed" || _sosStatus.startsWith("Error:");
+    final bool isSent = _sosStatus == "SOS Sent Successfully!";
+
     return Column(
       children: [
         Text(
@@ -472,10 +476,14 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
           ),
         ),
         const SizedBox(height: 15),
-        const Text(
-          "Emergency contacts are being notified.\nHelp is on the way!",
+        Text(
+          isFailed
+              ? "We couldn't reach your contacts yet.\nPlease check your internet and setup."
+              : (isSent
+                  ? "Your contacts have been alerted.\nHelp is on the way!"
+                  : "Emergency contacts are being notified.\nHelp is on the way!"),
           textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.white70),
+          style: const TextStyle(color: Colors.white70),
         ),
         const SizedBox(height: 40),
         ElevatedButton(
