@@ -233,6 +233,12 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
     final doctorName = appointment['doctorName'] as String? ?? 'Unknown Doctor';
     final isPast = appointmentDate.isBefore(DateTime.now());
     final isCancelled = status == 'cancelled';
+    final consultationType = appointment['consultationType'] as String? ?? 'Offline';
+    final isOnline = consultationType == 'Online';
+    final now = DateTime.now();
+    final isTimeForCall = isOnline && 
+                          appointmentDate.isAfter(now.subtract(const Duration(minutes: 15))) &&
+                          appointmentDate.isBefore(now.add(const Duration(minutes: 60)));
 
     Color statusColor;
     String statusText;
@@ -357,6 +363,55 @@ class _AppointmentsScreenState extends State<AppointmentsScreen> {
                   ),
                 ),
               ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: isOnline ? Colors.blue.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      isOnline ? Icons.videocam : Icons.local_hospital,
+                      size: 14,
+                      color: isOnline ? Colors.blue : Colors.orange,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      consultationType,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: isOnline ? Colors.blue : Colors.orange,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (isOnline && isTimeForCall && !isCancelled && !isPast) ...[
+                const SizedBox(width: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Text(
+                    "● Available Now",
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
           if (appointment['notes'] != null && (appointment['notes'] as String).isNotEmpty) ...[

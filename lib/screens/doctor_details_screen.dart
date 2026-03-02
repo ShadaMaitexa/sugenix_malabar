@@ -368,6 +368,7 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
   final _mobileController = TextEditingController();
   final _notesController = TextEditingController();
   String _selectedPatient = "My Self";
+  String _selectedConsultationType = "Offline";
   bool _isLoading = false;
   List<String> _availableTimeSlots = [];
   String? _lastAppointmentId;
@@ -541,6 +542,9 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
             _buildAppointmentFor(),
             const SizedBox(height: 20),
             _buildPatientSelection(),
+            const SizedBox(height: 25),
+            _buildConsultationTypeSelection(),
+            const SizedBox(height: 25),
             if (widget.doctor.consultationFee > 0) ...[
               const SizedBox(height: 20),
               _buildFeeBreakdown(),
@@ -981,6 +985,121 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
     );
   }
 
+  Widget _buildConsultationTypeSelection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "Consultation Type",
+          style: TextStyle(
+            fontSize: ResponsiveHelper.getResponsiveFontSize(
+              context,
+              mobile: 16,
+              tablet: 18,
+              desktop: 20,
+            ),
+            fontWeight: FontWeight.bold,
+            color: const Color(0xFF0C4556),
+          ),
+        ),
+        const SizedBox(height: 15),
+        Row(
+          children: [
+            Expanded(
+              child: GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _selectedConsultationType = "Offline";
+                  });
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  decoration: BoxDecoration(
+                    color: _selectedConsultationType == "Offline"
+                        ? const Color(0xFF0C4556)
+                        : Colors.grey[100],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: _selectedConsultationType == "Offline"
+                          ? const Color(0xFF0C4556)
+                          : Colors.transparent,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.local_hospital,
+                        color: _selectedConsultationType == "Offline"
+                            ? Colors.white
+                            : const Color(0xFF0C4556),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        "Offline",
+                        style: TextStyle(
+                          color: _selectedConsultationType == "Offline"
+                              ? Colors.white
+                              : Colors.black,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 15),
+            Expanded(
+              child: GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _selectedConsultationType = "Online";
+                  });
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  decoration: BoxDecoration(
+                    color: _selectedConsultationType == "Online"
+                        ? const Color(0xFF0C4556)
+                        : Colors.grey[100],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: _selectedConsultationType == "Online"
+                          ? const Color(0xFF0C4556)
+                          : Colors.transparent,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.videocam,
+                        color: _selectedConsultationType == "Online"
+                            ? Colors.white
+                            : const Color(0xFF0C4556),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        "Online",
+                        style: TextStyle(
+                          color: _selectedConsultationType == "Online"
+                              ? Colors.white
+                              : Colors.black,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
   Widget _buildFeeBreakdown() {
     final consultationFee = widget.doctor.consultationFee;
     final fees = RevenueService.calculateFees(consultationFee);
@@ -1371,6 +1490,7 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
         fee: widget.doctor.consultationFee > 0
             ? widget.doctor.consultationFee
             : null,
+        consultationType: _selectedConsultationType,
       );
 
       if (mounted) {

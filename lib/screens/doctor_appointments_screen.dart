@@ -143,6 +143,13 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
     final notes = appointment['notes'] as String? ?? '';
     final scheduledAt = appointment['dateTime'] as DateTime? ?? DateTime.now();
     final fee = (appointment['fee'] as num?)?.toDouble();
+    final consultationType = appointment['consultationType'] as String? ?? 'Offline';
+    final isOnline = consultationType == 'Online';
+    final now = DateTime.now();
+    // Appointment is considered "active" for video call if it's within 15 mins before/after
+    final isTimeForCall = isOnline && 
+                          scheduledAt.isAfter(now.subtract(const Duration(minutes: 15))) &&
+                          scheduledAt.isBefore(now.add(const Duration(minutes: 60)));
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -192,7 +199,56 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
                   ],
                 ),
               ),
-              _buildStatusChip(status),
+               _buildStatusChip(status),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: isOnline ? Colors.blue.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      isOnline ? Icons.videocam : Icons.local_hospital,
+                      size: 14,
+                      color: isOnline ? Colors.blue : Colors.orange,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      consultationType,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: isOnline ? Colors.blue : Colors.orange,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (isOnline && isTimeForCall && status == 'scheduled') ...[
+                const SizedBox(width: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: const Text(
+                    "● Time for Consultation",
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
           const SizedBox(height: 12),
@@ -227,6 +283,23 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
           Row(
             children: [
               if (_isUpdating) const CircularProgressIndicator(strokeWidth: 2),
+              if (isOnline && status != 'cancelled') ...[
+                const SizedBox(width: 8),
+                ElevatedButton.icon(
+                  onPressed: isTimeForCall ? () => _startVideoCall(appointment) : null,
+                  icon: const Icon(Icons.videocam, size: 18),
+                  label: const Text('Start Call'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: Colors.grey[300],
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ],
               const Spacer(),
               PopupMenuButton<String>(
                 onSelected: (value) => _updateStatus(
@@ -320,6 +393,51 @@ class _DoctorAppointmentsScreenState extends State<DoctorAppointmentsScreen> {
         setState(() => _isUpdating = false);
       }
     }
+  }
+
+  void _startVideoCall(Map<String, dynamic> appointment) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.videocam, color: Colors.green),
+            SizedBox(width: 10),
+            Text('Starting Video Call'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Patient: ${appointment['patientName']}'),
+            const SizedBox(height: 10),
+            const Text('Connecting to secure video session...'),
+            const SizedBox(height: 20),
+            const Center(child: CircularProgressIndicator()),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Video call engine initialized. Waiting for patient...'),
+                  backgroundColor: Colors.blue,
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+            child: const Text('Connect Now', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
   }
 }
 

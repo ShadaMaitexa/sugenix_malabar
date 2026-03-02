@@ -17,6 +17,7 @@ class AppointmentService {
     required String patientType,
     String? notes,
     double? fee,
+    required String consultationType,
   }) async {
     final user = _auth.currentUser;
     if (user == null) throw Exception('No user logged in');
@@ -76,6 +77,7 @@ class AppointmentService {
         'patientType': patientType,
         'notes': notes,
         'fee': consultationFee,
+        'consultationType': consultationType,
         'totalFee': totalFee,
         'platformFee': platformFee,
         'doctorFee': doctorFee,
