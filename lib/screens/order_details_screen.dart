@@ -316,19 +316,27 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
 
   Widget _buildAddressCard() {
     final addressRaw = _order!['shippingAddress'];
-    final Map<String, dynamic>? address =
-        addressRaw is Map ? Map<String, dynamic>.from(addressRaw) : null;
-    final addressStr = address == null
-        ? 'N/A'
-        : [
-            address['line1'],
-            address['line2'],
-            address['city'],
-            address['state'],
-            address['zip'],
-          ]
-            .where((s) => s != null && s.toString().trim().isNotEmpty)
-            .join(', ');
+    String addressStr = '';
+
+    if (addressRaw is String) {
+      addressStr = addressRaw;
+    } else if (addressRaw is Map) {
+      final Map<String, dynamic> address = Map<String, dynamic>.from(addressRaw);
+      addressStr = [
+        address['line1'],
+        address['line2'],
+        address['city'],
+        address['state'],
+        address['zip'],
+      ]
+          .where((s) => s != null && s.toString().trim().isNotEmpty)
+          .join(', ');
+    }
+
+    if (addressStr.isEmpty) {
+      addressStr = 'Address not provided';
+    }
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -354,7 +362,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            addressStr.isNotEmpty ? addressStr : 'Address not provided',
+            addressStr,
             style: const TextStyle(color: Colors.grey),
           ),
         ],

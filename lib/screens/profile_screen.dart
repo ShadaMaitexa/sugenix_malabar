@@ -17,6 +17,7 @@ import 'package:sugenix/screens/pharmacy_orders_screen.dart';
 import 'package:sugenix/screens/settings_screen.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -1220,6 +1221,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
           MaterialPageRoute(builder: (_) => const SettingsScreen()),
         ),
       ),
+      _ProfileQuickAction(
+        title: 'Help & Support',
+        icon: Icons.help_outline,
+        color: const Color(0xFFE91E63),
+        onTap: () => _showHelpSupportDialog(context),
+      ),
     ]);
 
     return actions;
@@ -1262,6 +1269,131 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             Icon(Icons.arrow_forward_ios, color: action.color, size: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showHelpSupportDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Help & Support'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Need help? We\'re here for you!',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              _buildSupportOption(
+                context,
+                Icons.phone,
+                'Call Support',
+                '+91 123 456 7890',
+                () async {
+                  final Uri telUri = Uri(scheme: 'tel', path: '+911234567890');
+                  if (await canLaunchUrl(telUri)) {
+                    await launchUrl(telUri);
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Could not launch phone dialer')),
+                    );
+                  }
+                },
+              ),
+              const SizedBox(height: 12),
+              _buildSupportOption(
+                context,
+                Icons.email,
+                'Email Support',
+                'support@sugenix.com',
+                () async {
+                  final Uri emailUri = Uri(
+                    scheme: 'mailto',
+                    path: 'support@sugenix.com',
+                    queryParameters: {'subject': 'Support Request - Sugenix'},
+                  );
+                  if (await canLaunchUrl(emailUri)) {
+                    await launchUrl(emailUri);
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Could not launch email client')),
+                    );
+                  }
+                },
+              ),
+              const SizedBox(height: 12),
+              _buildSupportOption(
+                context,
+                Icons.help_outline,
+                'FAQs',
+                'Frequently Asked Questions',
+                () {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Opening FAQs...')),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSupportOption(
+    BuildContext context,
+    IconData icon,
+    String title,
+    String subtitle,
+    VoidCallback onTap,
+  ) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.grey[100],
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: const Color(0xFF0C4556)),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF0C4556),
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
           ],
         ),
       ),

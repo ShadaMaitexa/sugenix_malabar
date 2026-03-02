@@ -212,82 +212,96 @@ class _MedicineOrdersScreenState extends State<MedicineOrdersScreen> {
         "title": "Scan Medicine",
         "icon": Icons.qr_code_scanner,
         "color": Colors.purple,
+        "subtitle": "Use camera to identify medicines",
       },
       {
         "title": "Buy Medicines",
         "icon": Icons.shopping_cart,
         "color": Colors.blue,
+        "subtitle": "Browse and order medicines online",
       },
-      
       {
         "title": "Prescription Upload",
         "icon": Icons.description,
         "color": Colors.green,
+        "subtitle": "Upload prescriptions for pharmacist review",
       },
       {
         "title": "Order History",
         "icon": Icons.history,
         "color": Colors.orange,
+        "subtitle": "Track your past and current orders",
       },
-      {"title": "Help & Support", "icon": Icons.help, "color": Colors.pink},
     ];
 
-    return GridView.builder(
+    return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 15,
-        mainAxisSpacing: 15,
-        childAspectRatio: 1.2,
-      ),
       itemCount: services.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final service = services[index];
+        final color = service["color"] as Color;
         return GestureDetector(
           onTap: () {
             _navigateToService(context, service["title"] as String);
           },
           child: Container(
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withOpacity(0.05),
                   blurRadius: 10,
-                  offset: const Offset(0, 5),
+                  offset: const Offset(0, 4),
                 ),
               ],
             ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+            child: Row(
               children: [
                 Container(
-                  width: 60,
-                  height: 60,
+                  width: 56,
+                  height: 56,
                   decoration: BoxDecoration(
-                    color: (service["color"] as Color).withOpacity(0.1),
-                    shape: BoxShape.circle,
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(14),
                   ),
                   child: Icon(
                     service["icon"] as IconData,
-                    color: service["color"] as Color,
-                    size: 30,
+                    color: color,
+                    size: 28,
                   ),
                 ),
-                const SizedBox(height: 15),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  child: Text(
-                    service["title"] as String,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: Color(0xFF0C4556),
-                    ),
-                    textAlign: TextAlign.center,
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        service["title"] as String,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0C4556),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        service["subtitle"] as String,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
                   ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: Colors.grey[400],
                 ),
               ],
             ),
@@ -307,7 +321,6 @@ class _MedicineOrdersScreenState extends State<MedicineOrdersScreen> {
         );
         break;
       case "Buy Medicines":
-     
       case "Order medicine online":
         Navigator.push(context,
             MaterialPageRoute(builder: (_) => const MedicineCatalogScreen()));
@@ -330,142 +343,11 @@ class _MedicineOrdersScreenState extends State<MedicineOrdersScreen> {
             MaterialPageRoute(
                 builder: (_) => const PatientOrderHistoryScreen()));
         break;
-      case "Help & Support":
-        _showHelpSupportDialog(context);
-        break;
       default:
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("$service feature coming soon!")),
         );
     }
-  }
-
-  void _showHelpSupportDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Help & Support'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Need help? We\'re here for you!',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              _buildSupportOption(
-                context,
-                Icons.phone,
-                'Call Support',
-                '+91-XXXX-XXXXXX',
-                () {
-                  // Implement phone call
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Calling support...')),
-                  );
-                },
-              ),
-              const SizedBox(height: 12),
-              _buildSupportOption(
-                context,
-                Icons.email,
-                'Email Support',
-                'support@sugenix.com',
-                () {
-                  // Implement email
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Opening email client...')),
-                  );
-                },
-              ),
-              const SizedBox(height: 12),
-              _buildSupportOption(
-                context,
-                Icons.chat,
-                'Live Chat',
-                'Available 24/7',
-                () {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Opening live chat...')),
-                  );
-                },
-              ),
-              const SizedBox(height: 12),
-              _buildSupportOption(
-                context,
-                Icons.help_outline,
-                'FAQs',
-                'Frequently Asked Questions',
-                () {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Opening FAQs...')),
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSupportOption(
-    BuildContext context,
-    IconData icon,
-    String title,
-    String subtitle,
-    VoidCallback onTap,
-  ) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.grey[100],
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: const Color(0xFF0C4556)),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFF0C4556),
-                    ),
-                  ),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
-          ],
-        ),
-      ),
-    );
   }
 }
 
