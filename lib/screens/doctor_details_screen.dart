@@ -1635,21 +1635,14 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            const Icon(Icons.check_circle, color: Colors.green, size: 28),
-            const SizedBox(width: 10),
-            const Expanded(
-              child: Text(
-                'Successfully Booked Appointment',
-                style: TextStyle(
-                  color: Color(0xFF0C4556),
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-              ),
-            ),
-          ],
+        title: const Text(
+          'Successfully Booked ',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: Color(0xFF0C4556),
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          ),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
