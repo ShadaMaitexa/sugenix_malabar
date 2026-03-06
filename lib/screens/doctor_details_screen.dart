@@ -10,6 +10,7 @@ import 'package:sugenix/services/auth_service.dart';
 import 'package:sugenix/services/revenue_service.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:sugenix/services/razorpay_service.dart';
+import 'package:sugenix/services/favorites_service.dart';
 
 class DoctorDetailsScreen extends StatelessWidget {
   final Doctor doctor;
@@ -27,9 +28,18 @@ class DoctorDetailsScreen extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.favorite_border, color: Color(0xFF0C4556)),
-            onPressed: () {},
+          StreamBuilder<bool>(
+            stream: FavoritesService().isFavoriteStream(doctor.id),
+            builder: (context, snapshot) {
+              final isFav = snapshot.data ?? doctor.isFavorite;
+              return IconButton(
+                icon: Icon(
+                  isFav ? Icons.favorite : Icons.favorite_border,
+                  color: isFav ? Colors.red : const Color(0xFF0C4556),
+                ),
+                onPressed: () => FavoritesService().toggleFavorite(doctor.id),
+              );
+            },
           ),
         ],
       ),
@@ -522,9 +532,18 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
           ),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.favorite_border, color: Color(0xFF0C4556)),
-            onPressed: () {},
+          StreamBuilder<bool>(
+            stream: FavoritesService().isFavoriteStream(widget.doctor.id),
+            builder: (context, snapshot) {
+              final isFav = snapshot.data ?? widget.doctor.isFavorite;
+              return IconButton(
+                icon: Icon(
+                  isFav ? Icons.favorite : Icons.favorite_border,
+                  color: isFav ? Colors.red : const Color(0xFF0C4556),
+                ),
+                onPressed: () => FavoritesService().toggleFavorite(widget.doctor.id),
+              );
+            },
           ),
         ],
       ),
@@ -926,37 +945,105 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
           ),
         ),
         const SizedBox(height: 15),
-        Row(
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              _buildPatientOption("My Self", "My Self"),
+              const SizedBox(width: 15),
+              _buildPatientOption("My Child", "My Child"),
+              if (_selectedPatient != "My Self" &&
+                  _selectedPatient != "My Child") ...[
+                const SizedBox(width: 15),
+                _buildPatientOption(_selectedPatient, _selectedPatient),
+              ],
+              const SizedBox(width: 15),
+              _buildAddButton(),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAddButton() {
+    return GestureDetector(
+      onTap: _showAddPatientDialog,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 15,
+          vertical: 10,
+        ),
+        decoration: BoxDecoration(
+          border: Border.all(color: const Color(0xFF0C4556)),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: const Text(
+          "+ Add",
+          style: TextStyle(
+            color: Color(0xFF0C4556),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showAddPatientDialog() {
+    final nameController = TextEditingController();
+    final phoneController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add Patient Details',
+            style: TextStyle(
+                color: Color(0xFF0C4556), fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            _buildPatientOption("My Self", "My Self"),
-            const SizedBox(width: 15),
-            _buildPatientOption("My Child", "My Child"),
-            const SizedBox(width: 15),
-            GestureDetector(
-              onTap: () {
-                // Handle add new patient
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 15,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  border: Border.all(color: const Color(0xFF0C4556)),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Text(
-                  "+ Add",
-                  style: TextStyle(
-                    color: Color(0xFF0C4556),
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+            TextField(
+              controller: nameController,
+              decoration: const InputDecoration(
+                labelText: 'Patient Name',
+                border: OutlineInputBorder(),
               ),
+            ),
+            const SizedBox(height: 15),
+            TextField(
+              controller: phoneController,
+              decoration: const InputDecoration(
+                labelText: 'Mobile Number',
+                border: OutlineInputBorder(),
+              ),
+              keyboardType: TextInputType.phone,
             ),
           ],
         ),
-      ],
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(color: Colors.red)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (nameController.text.isNotEmpty) {
+                setState(() {
+                  _patientNameController.text = nameController.text.trim();
+                  if (phoneController.text.isNotEmpty) {
+                    _mobileController.text = phoneController.text.trim();
+                  }
+                  _selectedPatient = nameController.text.trim();
+                });
+                Navigator.pop(context);
+              }
+            },
+            style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0C4556)),
+            child: const Text('Add', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
     );
   }
 
@@ -966,6 +1053,13 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
       onTap: () {
         setState(() {
           _selectedPatient = value;
+          if (value == "My Self") {
+            _patientNameController.text = _userProfile?['name'] ?? '';
+            _mobileController.text = _userProfile?['phone'] ?? '';
+          } else if (value == "My Child") {
+            _patientNameController.clear();
+            _mobileController.clear();
+          }
         });
       },
       child: Container(
@@ -1239,9 +1333,11 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
                 Icons.credit_card),
             _buildPaymentOption(dialogContext, 'Net Banking', 'razorpay',
                 Icons.account_balance),
-            const Divider(),
-            _buildPaymentOption(dialogContext, 'Pay at Hospital / Clinic',
-                'direct', Icons.local_hospital),
+            if (_selectedConsultationType != "Online") ...[
+              const Divider(),
+              _buildPaymentOption(dialogContext, 'Pay at Hospital / Clinic',
+                  'direct', Icons.local_hospital),
+            ],
           ],
         ),
         actions: [
@@ -1543,12 +1639,14 @@ class _AppointmentBookingScreenState extends State<AppointmentBookingScreen> {
           children: [
             const Icon(Icons.check_circle, color: Colors.green, size: 28),
             const SizedBox(width: 10),
-            const Text(
-              'Successfully Booked Appointment',
-              style: TextStyle(
-                color: Color(0xFF0C4556),
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
+            const Expanded(
+              child: Text(
+                'Successfully Booked Appointment',
+                style: TextStyle(
+                  color: Color(0xFF0C4556),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
               ),
             ),
           ],
