@@ -134,17 +134,8 @@ class RazorpayService {
         'email': email,
         'name': name,
       },
-      'external': {
-        'wallets': ['paytm'], // Optional: Enable specific wallets
-      },
       'theme': {
         'color': '#0C4556', // Your app's primary color
-      },
-      'method': {
-        'netbanking': true,
-        'card': true,
-        'upi': true,
-        'wallet': true,
       },
       if (notes != null) 'notes': notes,
     };
